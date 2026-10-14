@@ -1,0 +1,71 @@
+<!doctype html>
+<!-- Placeholder game for the red arcade cabinet. Replace with any game page (see ARCADE_GAMES in src/data/content.js). -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Snake</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #070512; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="c" width="640" height="480"></canvas>
+<script>
+const c = document.getElementById('c'), g = c.getContext('2d')
+const W = 640, H = 480, CELL = 20, CW = W / CELL, CH = (H - 40) / CELL
+const DIRS = { ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1], ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0] }
+let snake, dir, next, food, score, best = 0, state, acc
+
+function reset() {
+  snake = [[8, 11], [7, 11], [6, 11]]; dir = [1, 0]; next = dir; score = 0; acc = 0; state = 'ready'
+  place()
+}
+function place() {
+  do food = [Math.floor(Math.random() * CW), Math.floor(Math.random() * CH)]
+  while (snake.some(([x, y]) => x === food[0] && y === food[1]))
+}
+reset()
+
+addEventListener('keydown', (e) => {
+  const d = DIRS[e.key]
+  if (d) { e.preventDefault(); if (d[0] !== -dir[0] || d[1] !== -dir[1]) next = d; if (state === 'ready') state = 'play' }
+  if (e.key === ' ') { e.preventDefault(); if (state === 'over') reset(); else if (state === 'ready') state = 'play' }
+})
+
+function step() {
+  dir = next
+  const head = [snake[0][0] + dir[0], snake[0][1] + dir[1]]
+  if (head[0] < 0 || head[1] < 0 || head[0] >= CW || head[1] >= CH || snake.some(([x, y]) => x === head[0] && y === head[1])) {
+    state = 'over'; best = Math.max(best, score); return
+  }
+  snake.unshift(head)
+  if (head[0] === food[0] && head[1] === food[1]) { score += 1; place() } else snake.pop()
+}
+
+function text(t, y, size, color) {
+  g.font = `bold ${size}px monospace`; g.textAlign = 'center'; g.fillStyle = color
+  g.shadowColor = color; g.shadowBlur = 12; g.fillText(t, W / 2, y); g.shadowBlur = 0
+}
+
+function draw(t) {
+  g.fillStyle = '#070512'; g.fillRect(0, 0, W, H)
+  g.fillStyle = '#ff8a6b'; g.font = 'bold 18px monospace'; g.textAlign = 'left'
+  g.fillText(`SCORE ${score}`, 18, 28); g.textAlign = 'right'; g.fillText(`BEST ${best}`, W - 18, 28)
+  g.strokeStyle = '#3a2440'; g.strokeRect(0.5, 40.5, W - 1, H - 41)
+  g.fillStyle = '#ffd86b'; g.fillRect(food[0] * CELL + 3, 40 + food[1] * CELL + 3, CELL - 6, CELL - 6)
+  snake.forEach(([x, y], i) => { g.fillStyle = i ? '#3dff9a' : '#c9ffdf'; g.fillRect(x * CELL + 1, 40 + y * CELL + 1, CELL - 2, CELL - 2) })
+  if (state === 'ready' && t % 1.2 < 0.8) text('ARROWS TO START', H / 2 + 40, 26, '#ffd86b')
+  if (state === 'over') { text('GAME OVER', H / 2, 44, '#ff3ea5'); text('SPACE TO RETRY', H / 2 + 44, 20, '#ffd86b') }
+}
+
+let last = performance.now()
+requestAnimationFrame(function loop(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now
+  if (state === 'play') { acc += dt; const speed = Math.max(0.06, 0.12 - score * 0.003); while (acc > speed) { acc -= speed; step(); if (state !== 'play') break } }
+  draw(now / 1000)
+  requestAnimationFrame(loop)
+})
+</script>
+</body>
+</html>

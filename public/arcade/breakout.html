@@ -1,0 +1,92 @@
+<!doctype html>
+<!-- Placeholder game for the blue arcade cabinet. Replace with any game page (see ARCADE_GAMES in src/data/content.js). -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Breakout</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #070512; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="c" width="640" height="480"></canvas>
+<script>
+const c = document.getElementById('c'), g = c.getContext('2d')
+const W = 640, H = 480, COLS = 10, ROWS = 6, BW = 56, BH = 18, GAP = 6
+const COLORS = ['#ff3ea5', '#ff8a6b', '#ffd86b', '#3dff9a', '#2ef2ff', '#9b5cff']
+let keys = {}, state, bricks, paddle, ball, score, lives
+
+function reset(full) {
+  if (full) {
+    score = 0; lives = 3
+    bricks = []
+    for (let r = 0; r < ROWS; r++) for (let i = 0; i < COLS; i++)
+      bricks.push({ x: 18 + i * (BW + GAP), y: 60 + r * (BH + GAP), color: COLORS[r], alive: true })
+  }
+  paddle = { x: W / 2 - 45, w: 90 }
+  ball = { x: W / 2, y: H - 60, vx: 220 * (Math.random() < 0.5 ? -1 : 1), vy: -260 }
+  state = 'ready'
+}
+reset(true)
+
+addEventListener('keydown', (e) => {
+  keys[e.key] = true
+  if (e.key === ' ') { e.preventDefault(); if (state === 'over' || state === 'won') reset(true); else if (state === 'ready') state = 'play' }
+})
+addEventListener('keyup', (e) => (keys[e.key] = false))
+c.addEventListener('mousemove', (e) => {
+  const r = c.getBoundingClientRect()
+  paddle.x = Math.max(0, Math.min(W - paddle.w, ((e.clientX - r.left) / r.width) * W - paddle.w / 2))
+})
+c.addEventListener('click', () => { if (state === 'ready') state = 'play'; else if (state !== 'play') reset(true) })
+
+function step(dt) {
+  if (keys.ArrowLeft || keys.a) paddle.x -= 480 * dt
+  if (keys.ArrowRight || keys.d) paddle.x += 480 * dt
+  paddle.x = Math.max(0, Math.min(W - paddle.w, paddle.x))
+  if (state !== 'play') { ball.x = paddle.x + paddle.w / 2; return }
+  ball.x += ball.vx * dt; ball.y += ball.vy * dt
+  if (ball.x < 6 || ball.x > W - 6) { ball.vx *= -1; ball.x = Math.max(6, Math.min(W - 6, ball.x)) }
+  if (ball.y < 6) { ball.vy = Math.abs(ball.vy) }
+  if (ball.y > H - 34 && ball.y < H - 20 && ball.x > paddle.x && ball.x < paddle.x + paddle.w && ball.vy > 0) {
+    const hit = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2)
+    const speed = Math.min(560, Math.hypot(ball.vx, ball.vy) * 1.03)
+    ball.vx = speed * Math.sin(hit * 1.05); ball.vy = -speed * Math.cos(hit * 1.05)
+  }
+  for (const b of bricks) {
+    if (!b.alive) continue
+    if (ball.x > b.x - 6 && ball.x < b.x + BW + 6 && ball.y > b.y - 6 && ball.y < b.y + BH + 6) {
+      b.alive = false; score += 10; ball.vy *= -1; break
+    }
+  }
+  if (bricks.every((b) => !b.alive)) state = 'won'
+  if (ball.y > H + 10) { lives -= 1; if (lives <= 0) state = 'over'; else reset(false) }
+}
+
+function text(t, y, size, color) {
+  g.font = `bold ${size}px monospace`; g.textAlign = 'center'; g.fillStyle = color
+  g.shadowColor = color; g.shadowBlur = 12; g.fillText(t, W / 2, y); g.shadowBlur = 0
+}
+
+function draw(t) {
+  g.fillStyle = '#070512'; g.fillRect(0, 0, W, H)
+  for (const b of bricks) if (b.alive) { g.fillStyle = b.color; g.fillRect(b.x, b.y, BW, BH) }
+  g.fillStyle = '#e6e6ee'; g.fillRect(paddle.x, H - 30, paddle.w, 10)
+  g.fillStyle = '#ffffff'; g.fillRect(ball.x - 6, ball.y - 6, 12, 12)
+  g.font = 'bold 18px monospace'; g.textAlign = 'left'; g.fillStyle = '#2ef2ff'
+  g.fillText(`SCORE ${score}`, 18, 32); g.textAlign = 'right'; g.fillText('♥'.repeat(lives), W - 18, 32)
+  if (state === 'ready' && t % 1.2 < 0.8) text('PRESS SPACE', H / 2 + 60, 26, '#ffd86b')
+  if (state === 'over') { text('GAME OVER', H / 2 + 40, 44, '#ff3ea5'); text('SPACE TO RETRY', H / 2 + 84, 20, '#ffd86b') }
+  if (state === 'won') { text('YOU WIN', H / 2 + 40, 44, '#3dff9a'); text('SPACE TO PLAY AGAIN', H / 2 + 84, 20, '#ffd86b') }
+}
+
+let last = performance.now()
+requestAnimationFrame(function loop(now) {
+  const dt = Math.min(0.033, (now - last) / 1000); last = now
+  step(dt); draw(now / 1000)
+  requestAnimationFrame(loop)
+})
+</script>
+</body>
+</html>
