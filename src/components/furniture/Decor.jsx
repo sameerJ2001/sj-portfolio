@@ -50,9 +50,8 @@ export default function Decor() {
 
       <Clutter />
 
-      {/* ---- loose crates on the open floor ---- */}
+      {/* ---- a loose crate on the open floor ---- */}
       <Crate position={[1.5, 0, 3.5]} rotation-y={0.08} />
-      <Crate position={[2.45, 0, 3.4]} rotation-y={-0.1} />
     </group>
   )
 }
@@ -94,7 +93,7 @@ function Clutter() {
 }
 
 // Dark storage crate with glowing red strips: your MagicaVoxel model (voxel/crate.vox), plus a soft
-// red glow on the floor around it. Used for the loose crates and the gear crates (GearCorner).
+// red glow on the floor around it. Used for the loose crate and the gear crates (GearCorner).
 export function Crate(props) {
   const spill = useMemo(redSpillTexture, [])
   return (
