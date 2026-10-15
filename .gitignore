@@ -2,3 +2,9 @@ node_modules
 dist
 .DS_Store
 *.log
+
+# MagicaVoxel/Blender in-between exports (only the .vox sources and public/models/*.glb matter)
+voxel/*.obj
+voxel/*.mtl
+voxel/*.png
+voxel/*.glb
