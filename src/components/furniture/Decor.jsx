@@ -1,10 +1,11 @@
-import { useMemo, useRef } from 'react'
-import { ExtrudeGeometry, Path, Shape } from 'three'
+import { Suspense, useMemo, useRef } from 'react'
+import { AdditiveBlending, CanvasTexture, ExtrudeGeometry, Path, Shape, SRGBColorSpace } from 'three'
 import { useFrame } from '@react-three/fiber'
 import { useStore } from '../../store'
 import { UP, WALL_H } from '../../data/zones'
 import { C, PAINT, makeBrickTexture, makeConcreteTexture, makeNeonSignTexture, makePaintingTexture, makeSplatterTexture } from './materials'
 import CeilingFan from './CeilingFan'
+import VoxelModel from '../VoxelModel'
 
 // Non-clickable set dressing, laid out to match the reference room.
 // Upstairs (desk wing): twin spinning cooling rotors, bookshelf over the desk. (The arcades are zones: Arcade.jsx.)
@@ -92,28 +93,38 @@ function Clutter() {
   )
 }
 
-// Dark storage crate with glowing red strips (the reference's floor boxes). Also used by GearCorner.
-export function Crate({ size = [0.95, 0.5, 0.6], ...props }) {
-  const [w, h, d] = size
+// Dark storage crate with glowing red strips: your MagicaVoxel model (voxel/crate.vox), plus a soft
+// red glow on the floor around it. Used for the loose crates and the gear crates (GearCorner).
+export function Crate(props) {
+  const spill = useMemo(redSpillTexture, [])
   return (
     <group {...props}>
-      <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
-        <boxGeometry args={size} />
-        <meshStandardMaterial color="#1b1a22" roughness={0.6} metalness={0.3} />
+      <Suspense fallback={null}>
+        <VoxelModel name="crate" />
+      </Suspense>
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.006, 0]}>
+        <planeGeometry args={[1.7, 1.35]} />
+        <meshBasicMaterial map={spill} transparent blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
       </mesh>
-      {/* ribbed lid */}
-      <mesh position={[0, h + 0.02, 0]}>
-        <boxGeometry args={[w - 0.1, 0.04, d - 0.1]} />
-        <meshStandardMaterial color="#2a2833" />
-      </mesh>
-      {[-w / 2 + 0.08, w / 2 - 0.08].map((x) => (
-        <mesh key={x} position={[x, h / 2, d / 2 + 0.005]}>
-          <planeGeometry args={[0.03, h * 0.6]} />
-          <meshBasicMaterial color="#ff2a3c" toneMapped={false} />
-        </mesh>
-      ))}
     </group>
   )
+}
+
+let spillTexture
+function redSpillTexture() {
+  if (spillTexture) return spillTexture
+  const c = document.createElement('canvas')
+  c.width = c.height = 128
+  const g = c.getContext('2d')
+  const grad = g.createRadialGradient(64, 64, 10, 64, 64, 64)
+  grad.addColorStop(0, 'rgba(255,30,40,0.55)')
+  grad.addColorStop(0.5, 'rgba(255,20,30,0.2)')
+  grad.addColorStop(1, 'rgba(255,0,0,0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 128, 128)
+  spillTexture = new CanvasTexture(c)
+  spillTexture.colorSpace = SRGBColorSpace
+  return spillTexture
 }
 
 // Two big stacked industrial cooling units beside the desk, like the reference: grey metal housings
