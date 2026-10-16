@@ -4,13 +4,14 @@ import { RoundedBox } from '@react-three/drei'
 import { Vector3 } from 'three'
 import { useStore } from '../../store'
 import { SEAT } from '../../data/zones'
-import { createTerminalScreen, makeStatusScreenTexture } from '../../lib/screens'
+import { createGraphScreen, createTerminalScreen, makeStatusScreenTexture } from '../../lib/screens'
 import ScreenHtml from '../ScreenHtml'
 import Desktop from '../os/Desktop'
 
 // The workstation, like the reference: a plain grey metal desk, a chunky beige retro computer (a big
 // green-phosphor CRT on a desktop case, a small CRT stacked on top, a keyboard), boxes underneath, a
-// soda can, and a dark office chair. Matte, softly rounded edges throughout. A small green marker
+// soda can, a dark office chair, and a second beige terminal on the floor running a green graphics
+// screen. Matte, softly rounded edges throughout. A small green marker
 // floats above it so visitors know to click it first.
 // Zoom in and the big CRT boots SJ-OS (components/os) — a real, clickable desktop on the glass.
 // Local: wall behind (-z), the setup faces +z. The screen's spot comes from the 'pc' zone in zones.js.
@@ -38,6 +39,7 @@ export default function BattleStation({ zone }) {
   const chair = useRef()
   const atPC = useStore((s) => s.arrivedZone === 'pc')
   const term = useMemo(createTerminalScreen, [])
+  const graph = useMemo(createGraphScreen, [])
   const status = useMemo(makeStatusScreenTexture, [])
 
   // Boot SJ-OS the first time you sit down, then keep it running (hidden) so open windows survive
@@ -52,6 +54,7 @@ export default function BattleStation({ zone }) {
     gem.current.position.y = 2.25 + Math.sin(t * 2) * 0.05
     chair.current.visible = camera.position.distanceTo(CHAIR_CENTRE) > 1.6
     if (!atPC) term.tick(dt)
+    graph.tick(dt)
   })
 
   const [sx, sy, sz] = zone.screen.local
@@ -101,11 +104,21 @@ export default function BattleStation({ zone }) {
 
       {/* Big CRT: chunky beige shell with a tapered back, dark bezel, green glass */}
       <group>
-        <Box args={[sw + 0.16, sh + 0.16, 0.12]} r={0.025} mat={beige} position={[sx, sy, sz - 0.06]} />
-        <Box args={[sw + 0.04, sh + 0.06, 0.03]} r={0.008} mat={bezel} position={[sx, sy, sz - 0.012]} />
+        {[
+          [0, sh / 2 + 0.05, sw + 0.16, 0.1],
+          [0, -sh / 2 - 0.05, sw + 0.16, 0.1],
+          [-sw / 2 - 0.05, 0, 0.1, sh],
+          [sw / 2 + 0.05, 0, 0.1, sh],
+        ].map(([x, y, w, h], i) => (
+          <Box key={i} args={[w, h, 0.12]} r={0.02} mat={beige} position={[sx + x, sy + y, sz - 0.04]} />
+        ))}
+        <mesh position={[sx, sy, sz - 0.004]}>
+          <planeGeometry args={[sw + 0.02, sh + 0.02]} />
+          <meshStandardMaterial {...bezel} />
+        </mesh>
         <Box args={[sw + 0.06, sh + 0.08, 0.26]} r={0.03} mat={beigeDark} position={[sx, sy, sz - 0.24]} />
         <Box args={[0.36, 0.28, 0.14]} r={0.03} mat={beigeDark} position={[sx, sy, sz - 0.42]} />
-        <mesh position={[sx + sw / 2 + 0.03, sy - sh / 2 - 0.045, sz + 0.001]}>
+        <mesh position={[sx + sw / 2 + 0.03, sy - sh / 2 - 0.05, sz + 0.021]}>
           <planeGeometry args={[0.02, 0.012]} />
           <meshBasicMaterial color={[0.5, 2.6, 1.0]} toneMapped={false} />
         </mesh>
@@ -150,6 +163,44 @@ export default function BattleStation({ zone }) {
         <cylinderGeometry args={[0.033, 0.033, 0.12, 12]} />
         <meshStandardMaterial color="#c8282e" metalness={0.5} roughness={0.35} />
       </mesh>
+
+      {/* Second terminal on the floor past the end of the desk, angled to the room: a beige case with a
+          green graphics screen, a vent grille, and its keyboard lying in front */}
+      <group position={[1.38, 0, 0.42]} rotation-y={-0.55}>
+        <Box args={[0.6, 0.4, 0.46]} r={0.03} mat={beige} position={[0, 0.2, 0]} />
+        <Box args={[0.6, 0.06, 0.4]} r={0.02} mat={beigeDark} position={[0, 0.43, -0.02]} />
+        {[-0.12, 0, 0.12].map((x) => (
+          <Box key={x} args={[0.07, 0.04, 0.1]} r={0.01} mat={beigeDark} position={[x + 0.1, 0.48, -0.08]} />
+        ))}
+        <mesh position={[-0.09, 0.22, 0.231]}>
+          <planeGeometry args={[0.34, 0.26]} />
+          <meshStandardMaterial {...bezel} />
+        </mesh>
+        <mesh position={[-0.09, 0.22, 0.233]}>
+          <planeGeometry args={[0.3, 0.225]} />
+          <meshBasicMaterial map={graph.texture} color={[1.15, 1.15, 1.15]} toneMapped={false} />
+        </mesh>
+        {[0.1, 0.16, 0.22, 0.28].map((y) => (
+          <mesh key={y} position={[0.2, y, 0.231]}>
+            <planeGeometry args={[0.12, 0.02]} />
+            <meshStandardMaterial {...bezel} />
+          </mesh>
+        ))}
+        <mesh position={[0.2, 0.36, 0.232]}>
+          <planeGeometry args={[0.018, 0.018]} />
+          <meshBasicMaterial color={[2.5, 0.3, 0.3]} toneMapped={false} />
+        </mesh>
+        <pointLight position={[-0.09, 0.25, 0.45]} color="#4dff8a" intensity={0.8} distance={1.4} />
+        <group position={[-0.05, 0, 0.42]} rotation-y={0.25}>
+          <Box args={[0.46, 0.035, 0.16]} r={0.01} mat={beige} position={[0, 0.018, 0]} />
+          {Array.from({ length: 3 }).map((_, row) => (
+            <mesh key={row} position={[0, 0.037, -0.04 + row * 0.04]} rotation-x={-Math.PI / 2}>
+              <planeGeometry args={[0.4, 0.028]} />
+              <meshStandardMaterial color="#5f5a50" roughness={0.7} />
+            </mesh>
+          ))}
+        </group>
+      </group>
 
       {/* Office chair (SJ sits here): dark teal-grey, tall rounded back, armrests, five-star base */}
       <group ref={chair} position={[0, 0, 0.55]}>

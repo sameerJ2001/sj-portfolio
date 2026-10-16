@@ -223,6 +223,78 @@ export function createAttractScreen(title, color) {
   return { texture, tick }
 }
 
+// Green-phosphor "graphics" screen for the second terminal on the floor: a scrolling waveform,
+// a bar graph that keeps re-measuring, a rotating radar sweep and a few status lines.
+export function createGraphScreen() {
+  const W = 384
+  const H = 288
+  const { g, texture } = canvas(W, H)
+  const bars = Array.from({ length: 9 }, () => Math.random())
+  let t = 0
+  let acc = 0
+
+  const draw = () => {
+    g.fillStyle = '#03130a'
+    g.fillRect(0, 0, W, H)
+    g.shadowColor = '#3dff9a'
+    g.shadowBlur = 6
+    g.strokeStyle = g.fillStyle = '#7dffaa'
+    g.lineWidth = 2
+    g.font = 'bold 15px monospace'
+    g.textBaseline = 'top'
+    g.fillText('SIGNAL  CH-2', 14, 10)
+    g.fillText(`${(4.2 + Math.sin(t) * 0.6).toFixed(2)} kHz`, W - 112, 10)
+
+    // waveform box
+    g.strokeRect(14, 34, W - 28, 96)
+    g.beginPath()
+    for (let x = 0; x <= W - 32; x += 3) {
+      const y = 82 + Math.sin(x * 0.07 + t * 5) * 22 * Math.sin(x * 0.013 + t) + Math.sin(x * 0.31 + t * 9) * 5
+      x ? g.lineTo(16 + x, y) : g.moveTo(16 + x, y)
+    }
+    g.stroke()
+
+    // bar graph
+    bars.forEach((v, i) => {
+      const h = 10 + v * 90
+      g.fillRect(18 + i * 22, 250 - h, 14, h)
+    })
+    g.fillRect(14, 252, 206, 2)
+
+    // radar sweep
+    const cx = 300
+    const cy = 196
+    g.beginPath()
+    g.arc(cx, cy, 52, 0, Math.PI * 2)
+    g.stroke()
+    g.beginPath()
+    g.arc(cx, cy, 26, 0, Math.PI * 2)
+    g.stroke()
+    g.beginPath()
+    g.moveTo(cx, cy)
+    g.lineTo(cx + Math.cos(t * 2) * 52, cy + Math.sin(t * 2) * 52)
+    g.stroke()
+    g.fillRect(cx + 18, cy - 30, 5, 5)
+    g.fillRect(cx - 34, cy + 12, 5, 5)
+    g.shadowBlur = 0
+    glass(g, W, H)
+    texture.needsUpdate = true
+  }
+
+  const tick = (dt) => {
+    t += dt
+    acc += dt
+    bars.forEach((v, i) => (bars[i] = Math.min(1, Math.max(0, v + (Math.random() - 0.5) * dt * 3))))
+    if (acc > 1 / 15) {
+      acc = 0
+      draw()
+    }
+  }
+
+  draw()
+  return { texture, tick }
+}
+
 // The little screen on top of the CRT: a static green-phosphor system monitor.
 export function makeStatusScreenTexture() {
   const W = 256
