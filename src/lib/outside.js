@@ -243,3 +243,77 @@ export function makeCityGlow() {
   g.fillRect(0, 0, 16, 256)
   return texture(c)
 }
+
+// Frosted window glass, lit from behind: a soft bright hotspot up near the top left, faint light
+// streaks, darker toward the bottom-right corner. White-ish; the Window tints it for the time of day.
+export function makeFrostTexture() {
+  const W = 512
+  const H = 256
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const g = c.getContext('2d')
+  g.fillStyle = '#8c8c8c'
+  g.fillRect(0, 0, W, H)
+  const hot = g.createRadialGradient(W * 0.3, H * 0.2, 0, W * 0.3, H * 0.2, W * 0.62)
+  hot.addColorStop(0, 'rgba(255,255,255,1)')
+  hot.addColorStop(0.35, 'rgba(255,255,255,0.55)')
+  hot.addColorStop(1, 'rgba(255,255,255,0)')
+  g.fillStyle = hot
+  g.fillRect(0, 0, W, H)
+  const shade = g.createLinearGradient(0, 0, W, H)
+  shade.addColorStop(0.45, 'rgba(0,0,0,0)')
+  shade.addColorStop(1, 'rgba(0,0,0,0.45)')
+  g.fillStyle = shade
+  g.fillRect(0, 0, W, H)
+  // soft beams of light falling through the frost
+  g.globalCompositeOperation = 'lighter'
+  for (const [x, w, a] of [[150, 40, 0.16], [230, 24, 0.12], [300, 60, 0.08]]) {
+    const beam = g.createLinearGradient(0, 0, 0, H)
+    beam.addColorStop(0, `rgba(255,255,255,${a})`)
+    beam.addColorStop(1, 'rgba(255,255,255,0)')
+    g.fillStyle = beam
+    g.beginPath()
+    g.moveTo(x, 0)
+    g.lineTo(x + w, 0)
+    g.lineTo(x + w + 90, H)
+    g.lineTo(x + 90, H)
+    g.fill()
+  }
+  g.globalCompositeOperation = 'source-over'
+  return texture(c)
+}
+
+// Glossy reflections on the glass surface: soft diagonal glints and a bright line along the top
+// edge (white on black, used additively).
+export function makeGlassGlintTexture() {
+  const W = 512
+  const H = 256
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const g = c.getContext('2d')
+  g.fillStyle = '#000'
+  g.fillRect(0, 0, W, H)
+  const band = (x, w, a) => {
+    const grad = g.createLinearGradient(x, 0, x + w, 0)
+    grad.addColorStop(0, 'rgba(255,255,255,0)')
+    grad.addColorStop(0.5, `rgba(255,255,255,${a})`)
+    grad.addColorStop(1, 'rgba(255,255,255,0)')
+    g.save()
+    g.transform(1, 0, -0.55, 1, 0, 0)
+    g.fillStyle = grad
+    g.fillRect(x, 0, w, H)
+    g.restore()
+  }
+  band(200, 70, 0.5)
+  band(290, 18, 0.7)
+  band(420, 40, 0.35)
+  band(600, 110, 0.25)
+  const top = g.createLinearGradient(0, 0, 0, 22)
+  top.addColorStop(0, 'rgba(255,255,255,0.9)')
+  top.addColorStop(1, 'rgba(255,255,255,0)')
+  g.fillStyle = top
+  g.fillRect(0, 0, W, 22)
+  return texture(c)
+}

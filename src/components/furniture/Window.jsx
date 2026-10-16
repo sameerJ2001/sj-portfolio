@@ -15,22 +15,35 @@ import {
 } from 'three'
 import { WINDOW } from '../../data/zones'
 import { env, tickEnvironment } from '../../lib/environment'
-import { makeBolt, makeCityGlow, makeClouds, makeForest, makeGlow, makeGround, makeSkyline, makeStars } from '../../lib/outside'
+import {
+  makeBolt,
+  makeCityGlow,
+  makeClouds,
+  makeForest,
+  makeFrostTexture,
+  makeGlassGlintTexture,
+  makeGlow,
+  makeGround,
+  makeSkyline,
+  makeStars,
+} from '../../lib/outside'
 import { C } from './materials'
 
-// The big upstairs window: a real opening in the back wall (Room.jsx leaves the hole) with a chunky
-// chamfered frame, a venetian shutter that raises, lowers and tilts on its own, and a live view
-// outside (like the reference video): a winter forest in front of a faint city skyline, with a
-// day/night sky, sun + moon, clouds, and rain / snow / fog / lightning. Snow settles on the
-// branches and ground while it snows and melts after.
-// Sun or moonlight shines in through the slats and casts striped shadows into the room.
+// The big upstairs window, like the reference: a deep opening in the back wall (Room.jsx leaves the
+// hole) framed by stepped chamfered layers, with frosted glass that glows like a light panel and a
+// glossy, reflective surface over it, and a detective pinboard (notes joined by red string) on the
+// glass. It's still live: the glow takes its colour from the real Sydney sky behind it (warm orange
+// city light at night, bright cream by day, dimmer under cloud), rain runs down the glass and
+// lightning flashes through. Behind the frost is the outside scene (forest, city skyline, sky, sun,
+// moon, weather), faintly visible. Light pours in and casts shadows into the room.
+// SHUTTER = true brings back the venetian shutter that raises, lowers and tilts on its own.
 // Local: wall face at z ≈ 0, room is +z, outside is -z. Weather/time live in lib/environment.js.
 const { w: W, h: H, cy: CY, chamfer: CH } = WINDOW
 const HW = W / 2
 const HH = H / 2
 const TOP = CY + HH
 const BOT = CY - HH
-const FRAME = '#c9c4bb'
+const SHUTTER = false
 const WALL_BACK = -0.17 // back face of the wall, in this local space
 
 // The opening: a rectangle with its corners cut off, counter-clockwise
@@ -52,72 +65,85 @@ export default function Window() {
     <group>
       <Frame />
       <Glass />
-      <Shutter />
+      <PinBoard />
+      {SHUTTER && <Shutter />}
       <Outside />
       <WindowLights />
     </group>
   )
 }
 
+// An octagon around the opening, grown outward by margin m (chamfers kept parallel)
+function octShape(m, hole) {
+  const hw = HW + m
+  const hh = HH + m
+  const ch = CH + m * 0.414
+  const pts = [[-hw + ch, -hh], [hw - ch, -hh], [hw, -hh + ch], [hw, hh - ch], [hw - ch, hh], [-hw + ch, hh], [-hw, hh - ch], [-hw, -hh + ch]]
+  const p = hole ? new Path() : new Shape()
+  pts.forEach(([x, y], i) => (i ? p.lineTo(x, y) : p.moveTo(x, y)))
+  return p
+}
+
+// Stepped chamfered frame: four layers stepping inward and back toward the glass, each one
+// running back to the rear of the wall so there are no gaps. Their edges catch the window's glow.
+const STEPS = [
+  { outer: 0.28, inner: 0.15, front: 0.06, color: '#3b4749' },
+  { outer: 0.15, inner: 0.1, front: 0.025, color: '#445355' },
+  { outer: 0.1, inner: 0.05, front: -0.01, color: '#4d5e61' },
+  { outer: 0.05, inner: 0, front: -0.045, color: '#58696c' },
+]
 function Frame() {
-  const plate = useMemo(() => {
-    const M = 0.18
-    const s = new Shape()
-    s.moveTo(-HW - M, -HH - M)
-    s.lineTo(HW + M, -HH - M)
-    s.lineTo(HW + M, HH + M)
-    s.lineTo(-HW - M, HH + M)
-    const hole = new Path()
-    OCT.forEach(([x, y], i) => (i ? hole.lineTo(x, y) : hole.moveTo(x, y)))
-    s.holes.push(hole)
-    return new ExtrudeGeometry(s, { depth: 0.05, bevelEnabled: false })
-  }, [])
-
-  // One deep panel along each edge of the opening, from the back of the wall to the face plate
-  const D = 0.06 - WALL_BACK
-  const panels = OCT.map(([x0, y0], i) => {
-    const [x1, y1] = OCT[(i + 1) % OCT.length]
-    const len = Math.hypot(x1 - x0, y1 - y0)
-    const nx = (y1 - y0) / len
-    const ny = -(x1 - x0) / len
-    return { len, angle: Math.atan2(y1 - y0, x1 - x0), x: (x0 + x1) / 2 + nx * 0.03, y: (y0 + y1) / 2 + ny * 0.03 }
-  })
-
+  const rings = useMemo(
+    () =>
+      STEPS.map(({ outer, inner, front, color }) => {
+        const s = octShape(outer)
+        s.holes.push(octShape(inner, true))
+        const geo = new ExtrudeGeometry(s, { depth: front - WALL_BACK, bevelEnabled: false })
+        geo.translate(0, 0, WALL_BACK)
+        return { geo, color }
+      }),
+    []
+  )
   return (
     <group position={[0, CY, 0]}>
-      <mesh geometry={plate} position={[0, 0, 0.06]} castShadow receiveShadow>
-        <meshStandardMaterial color={FRAME} roughness={0.7} />
-      </mesh>
-      {panels.map((p, i) => (
-        <mesh key={i} position={[p.x, p.y, WALL_BACK + D / 2]} rotation-z={p.angle} castShadow receiveShadow>
-          <boxGeometry args={[p.len + 0.01, 0.06, D]} />
-          <meshStandardMaterial color={i % 2 ? '#b5ad9f' : FRAME} roughness={0.75} />
+      {rings.map(({ geo, color }, i) => (
+        <mesh key={i} geometry={geo} castShadow receiveShadow>
+          <meshStandardMaterial color={color} roughness={0.55} metalness={0.25} />
         </mesh>
       ))}
-      {/* Deep sill inside the room, with the plant */}
-      <mesh position={[0, -HH - 0.02, 0.2]} castShadow receiveShadow>
-        <boxGeometry args={[W - 2 * CH + 0.3, 0.05, 0.3]} />
-        <meshStandardMaterial color={FRAME} roughness={0.7} />
-      </mesh>
-      <mesh position={[-HW + 0.45, -HH + 0.08, 0.2]} castShadow>
-        <cylinderGeometry args={[0.07, 0.055, 0.14, 12]} />
-        <meshStandardMaterial color={C.coral} />
-      </mesh>
-      <mesh position={[-HW + 0.45, -HH + 0.22, 0.2]} castShadow>
-        <sphereGeometry args={[0.12, 10, 10]} />
-        <meshStandardMaterial color="#3f8f5a" />
-      </mesh>
+      {/* ridged sill along the bottom of the opening */}
+      {[0, 1, 2, 3].map((i) => (
+        <mesh key={i} position={[0, -HH + 0.012 + i * 0.006, -0.06 + i * 0.03]}>
+          <boxGeometry args={[W - 2 * CH - 0.02, 0.012, 0.012]} />
+          <meshStandardMaterial color="#6d8084" roughness={0.4} metalness={0.4} />
+        </mesh>
+      ))}
     </group>
   )
 }
 
 const DROPS = 60
+const FROST_NIGHT = new Color('#ff6418')
+const FROST_DAY = new Color('#ffe4bf')
+const FROST_GREY = new Color('#9aa3ad')
 function Glass() {
   const glass = useMemo(() => {
     const s = new Shape()
     OCT.forEach(([x, y], i) => (i ? s.lineTo(x, y) : s.moveTo(x, y)))
-    return new ShapeGeometry(s)
+    const g = new ShapeGeometry(s)
+    // map UVs to the opening's bounding box so textures fill it
+    const pos = g.attributes.position
+    const uv = new Float32Array(pos.count * 2)
+    for (let i = 0; i < pos.count; i++) {
+      uv[i * 2] = (pos.getX(i) + HW) / W
+      uv[i * 2 + 1] = (pos.getY(i) + HH) / H
+    }
+    g.setAttribute('uv', new Float32BufferAttribute(uv, 2))
+    return g
   }, [])
+  const tex = useMemo(() => ({ frost: makeFrostTexture(), glint: makeGlassGlintTexture() }), [])
+  const frost = useRef()
+  const glint = useRef()
   const drops = useRef([])
   const dropMat = useMemo(() => new MeshBasicMaterial({ color: '#cfe9ff', transparent: true, opacity: 0.45, depthWrite: false }), [])
   const seeds = useMemo(
@@ -127,6 +153,12 @@ function Glass() {
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
+    const day = env.daylight
+    // frost glow follows the sky: orange city at night, warm cream by day, greyer + dimmer under cloud
+    const c = frost.current.color
+    c.copy(FROST_NIGHT).lerp(FROST_DAY, day).lerp(FROST_GREY, env.cloud * 0.35 * day)
+    c.multiplyScalar((1.85 - day * 0.25) * (1 - env.cloud * 0.2) * (1 - env.storm * 0.35) + env.flash * 2)
+    glint.current.opacity = 0.18 + day * 0.1
     const wet = env.rain
     dropMat.opacity = 0.45 * wet
     drops.current.forEach((m, i) => {
@@ -139,13 +171,84 @@ function Glass() {
 
   return (
     <group position={[0, CY, -0.1]}>
+      {/* frosted pane glowing like a light panel; the outside scene shows through faintly */}
       <mesh geometry={glass}>
-        <meshBasicMaterial color="#cfe0ff" transparent opacity={0.05} depthWrite={false} />
+        <meshBasicMaterial ref={frost} map={tex.frost} transparent opacity={0.96} toneMapped={false} depthWrite={false} />
+      </mesh>
+      {/* glossy glass surface: picks up highlights and reflections from the room */}
+      <mesh geometry={glass} position={[0, 0, 0.004]}>
+        <meshPhysicalMaterial color="#ffffff" transparent opacity={0.12} roughness={0.22} metalness={0.1} clearcoat={1} clearcoatRoughness={0.18} envMapIntensity={3} depthWrite={false} />
+      </mesh>
+      <mesh geometry={glass} position={[0, 0, 0.006]}>
+        <meshBasicMaterial ref={glint} map={tex.glint} transparent blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
       </mesh>
       {/* Raindrops running down the glass */}
       {seeds.map((s, i) => (
-        <mesh key={i} ref={(m) => (drops.current[i] = m)} position={[s.x, 0, 0.003]} material={dropMat}>
+        <mesh key={i} ref={(m) => (drops.current[i] = m)} position={[s.x, 0, 0.008]} material={dropMat}>
           <planeGeometry args={[0.008, 0.1]} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+// SJ's pinboard on the glass, like the reference: notes, photos and printouts pinned up and joined
+// with red string. (Later: make the notes clickable — projects, CTF writeups, ideas.)
+const NOTES = [
+  // [x, y, w, h, colour, tilt]
+  [-0.92, 0.14, 0.16, 0.1, '#e9e4d8', 0.05],
+  [-0.7, 0.02, 0.12, 0.17, '#c4cf86', -0.04],
+  [-0.74, -0.24, 0.11, 0.08, '#3a3f44', 0.08],
+  [-0.48, 0.1, 0.14, 0.19, '#dcdfd2', 0.03],
+  [-0.44, -0.2, 0.1, 0.12, '#a9b07a', -0.06],
+  [-0.22, 0.25, 0.17, 0.12, '#e6e1d6', -0.02],
+  [-0.16, -0.02, 0.11, 0.14, '#cfc8b6', 0.06],
+  [0.02, 0.26, 0.13, 0.09, '#4a4f55', 0.04],
+  [0.06, -0.24, 0.1, 0.15, '#c4cf86', -0.05],
+  [0.24, 0.1, 0.14, 0.11, '#e9e4d8', 0.02],
+  [0.3, -0.14, 0.12, 0.17, '#b8b38f', -0.03],
+  [0.52, 0.2, 0.17, 0.1, '#3a3f44', 0.05],
+]
+const STRINGS = [[0, 1], [1, 3], [3, 5], [5, 7], [3, 6], [6, 8], [6, 9], [9, 11], [9, 10], [2, 4], [4, 6], [1, 2], [7, 9]]
+function PinBoard() {
+  const strings = useMemo(
+    () =>
+      STRINGS.map(([a, b]) => {
+        const [x0, y0, , h0] = NOTES[a]
+        const [x1, y1, , h1] = NOTES[b]
+        const p0 = [x0, y0 + h0 / 2 - 0.02]
+        const p1 = [x1, y1 + h1 / 2 - 0.02]
+        const len = Math.hypot(p1[0] - p0[0], p1[1] - p0[1])
+        return { x: (p0[0] + p1[0]) / 2, y: (p0[1] + p1[1]) / 2, len, angle: Math.atan2(p1[1] - p0[1], p1[0] - p0[0]) }
+      }),
+    []
+  )
+  return (
+    <group position={[-0.05, CY + 0.02, -0.088]}>
+      {NOTES.map(([x, y, w, h, color, tilt], i) => (
+        <group key={i} position={[x, y, 0]} rotation-z={tilt}>
+          <mesh>
+            <planeGeometry args={[w, h]} />
+            <meshStandardMaterial color={color} roughness={0.85} />
+          </mesh>
+          {/* a few scribbled lines on the lighter notes */}
+          {color > '#9' &&
+            [0.25, 0.05, -0.15].map((ly) => (
+              <mesh key={ly} position={[-w * 0.08, ly * h, 0.001]}>
+                <planeGeometry args={[w * 0.6, 0.006]} />
+                <meshBasicMaterial color="#5a5a52" />
+              </mesh>
+            ))}
+          <mesh position={[0, h / 2 - 0.02, 0.008]}>
+            <sphereGeometry args={[0.011, 8, 6]} />
+            <meshStandardMaterial color="#c4161c" roughness={0.3} />
+          </mesh>
+        </group>
+      ))}
+      {strings.map(({ x, y, len, angle }, i) => (
+        <mesh key={`s${i}`} position={[x, y, 0.006]} rotation-z={angle}>
+          <boxGeometry args={[len, 0.005, 0.003]} />
+          <meshStandardMaterial color="#b0121a" emissive="#5a0508" emissiveIntensity={0.6} roughness={0.5} />
         </mesh>
       ))}
     </group>
