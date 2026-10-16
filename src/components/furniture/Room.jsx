@@ -159,74 +159,80 @@ function Mezzanine() {
   )
 }
 
-// Teal pipework that frames the desk deck and makes it look hung, like the reference: a low rail
-// around its open front, right and back edges, pipes just under the slab along the front and back,
-// a clamped pipe along the right edge's face, and uprights joining them to the rail.
-const RAIL_Y = UP + 0.45
-const UNDER_Y = UP - T - 0.14
-const FACE_Y = UP - T / 2
-const FX = DESK_DECK.x1 + 0.07 // just outside the right edge
-const FZ = DESK_DECK.z1 + 0.07 // …the front edge (the cut face of the room)
-const BZ = DESK_DECK.z0 - 0.07 // …and the back edge, over the gap
-const LEFT = -3.93
-const BRIDGE_END = BRIDGE.x1 - 0.06 // where the back rail stops, at the bridge
+// Teal pipework that frames the desk deck, like the reference: no railing, just two chunky pipes
+// hugging the slab (one along its top edge, one along its bottom edge, the dark slab face showing
+// between them) with clamp bands, running along the front, right and back edges. At the front corner
+// and the back-right corner a pipe drops below the slab and loops back under it, so the deck looks hung.
+const PIPE_R = 0.05
+const TOP_Y = UP - 0.02 // sits on the slab's top edge, like a bumper
+const BOT_Y = UP - T + 0.03 // along the slab's bottom edge
+const HANG_Y = UP - T - 0.38 // the hanging loops, below the slab
+const OUT = 0.07 // how far outside the slab edge the pipes run
+const FX = DESK_DECK.x1 + OUT // right edge
+const FZ = DESK_DECK.z1 + OUT // front edge (the cut face of the room)
+const BZ = DESK_DECK.z0 - OUT // back edge, over the gap
+const WALL_X = -3.99
+const BRIDGE_END = BRIDGE.x1 + OUT // where the back run stops, at the bridge
 
 function DeckPipework() {
-  const teal = { color: C.pipe }
-  const edge = (y) => [
-    [LEFT, y, FZ],
+  const pipe = { color: C.pipe, radius: PIPE_R, bend: 0.08 }
+  const frame = (y) => [
+    [WALL_X, y, FZ],
     [FX, y, FZ],
     [FX, y, BZ],
     [BRIDGE_END, y, BZ],
   ]
   return (
     <group>
-      {/* top rail, dropping onto the bridge at the end */}
-      <Pipe {...teal} radius={0.04} points={[...edge(RAIL_Y), [BRIDGE_END, UP, BZ]]} />
-      {/* pipes just under the slab along the front and back edges, with hanger clamps
-          (the right edge has the clamped face pipe instead, so the ground floor stays visible) */}
-      <Pipe {...teal} radius={0.04} clampEvery={0.9} points={[[LEFT, UNDER_Y, FZ], [FX, UNDER_Y, FZ]]} />
-      <Pipe {...teal} radius={0.04} clampEvery={0.9} points={[[FX, UNDER_Y, BZ], [BRIDGE_END, UNDER_Y, BZ]]} />
-      {/* clamped pipe along the right edge's face */}
-      <Pipe {...teal} radius={0.032} clampEvery={0.7} points={[[FX - 0.02, FACE_Y, FZ - 0.1], [FX - 0.02, FACE_Y, BZ + 0.1]]} flanges={false} />
-      {/* uprights: front + back edges join rail and under-pipe, the right edge joins rail and face pipe */}
-      {[
-        [(LEFT + FX) / 2, FZ, UNDER_Y],
-        [FX - 0.25, FZ, UNDER_Y],
-        [FX, FZ - 0.25, FACE_Y],
-        [FX, 2.2, FACE_Y],
-        [FX, 0.6, FACE_Y],
-        [FX, BZ + 0.25, FACE_Y],
-        [(FX + BRIDGE_END) / 2, BZ, UNDER_Y],
-      ].map(([x, z, y0]) => (
-        <Pipe key={`${x}${z}`} {...teal} radius={0.032} flanges={false} points={[[x, y0, z], [x, RAIL_Y, z]]} />
-      ))}
+      <Pipe {...pipe} clampEvery={0.6} points={frame(TOP_Y)} />
+      <Pipe {...pipe} clampEvery={0.6} points={frame(BOT_Y)} />
+      {/* hanging loop under the front edge: down from the corner, along, and back up into the slab */}
+      <Pipe
+        {...pipe}
+        points={[
+          [FX, TOP_Y, FZ],
+          [FX, HANG_Y, FZ],
+          [FX - 1.3, HANG_Y, FZ],
+          [FX - 1.3, BOT_Y, FZ],
+        ]}
+        flanges={false}
+      />
+      {/* and one under the right edge, from the back corner toward the front */}
+      <Pipe
+        {...pipe}
+        points={[
+          [FX, TOP_Y, BZ],
+          [FX, HANG_Y, BZ],
+          [FX, HANG_Y, BZ + 1.3],
+          [FX, BOT_Y, BZ + 1.3],
+        ]}
+        flanges={false}
+      />
     </group>
   )
 }
 
-// Olive bent-pipe railing in front of the bed (left of the stairs): one rail with rounded corners
-// dropping to the floor at both ends, and pipe posts in between.
+// Olive bent-pipe railing in front of the bed (left of the stairs), like the reference: one rail that
+// bends down into the deck at both ends, posts in between, every upright standing on a small base plate.
 function BedRail() {
   const x0 = 0.6
-  const x1 = STAIRS.x - STAIRS.width / 2 - 0.08
-  const z = BACK_DECK.z1 - 0.08
-  const top = UP + 0.8
+  const x1 = STAIRS.x - STAIRS.width / 2 - 0.1
+  const z = BACK_DECK.z1 - 0.1
+  const top = UP + 0.78
+  const posts = [0.25, 0.5, 0.75].map((f) => x0 + (x1 - x0) * f)
+  const mat = <meshStandardMaterial color={C.olive} metalness={0.5} roughness={0.4} />
   return (
     <group>
-      <Pipe color={C.olive} radius={0.038} bend={0.14} points={[[x0, UP, z], [x0, top, z], [x1, top, z], [x1, UP, z]]} />
-      {[0.25, 0.5, 0.75].map((f) => {
-        const x = x0 + (x1 - x0) * f
-        return (
-          <group key={f}>
-            <Pipe color={C.olive} radius={0.032} points={[[x, UP, z], [x, top, z]]} />
-            <mesh position={[x, top, z]}>
-              <sphereGeometry args={[0.05, 12, 10]} />
-              <meshStandardMaterial color={C.olive} metalness={0.55} roughness={0.38} />
-            </mesh>
-          </group>
-        )
-      })}
+      <Pipe color={C.olive} radius={0.04} bend={0.11} points={[[x0, UP, z], [x0, top, z], [x1, top, z], [x1, UP, z]]} flanges={false} />
+      {posts.map((x) => (
+        <Pipe key={x} color={C.olive} radius={0.034} points={[[x, UP, z], [x, top, z]]} flanges={false} />
+      ))}
+      {[x0, ...posts, x1].map((x) => (
+        <mesh key={`b${x}`} position={[x, UP + 0.012, z]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.065, 0.075, 0.024, 16]} />
+          {mat}
+        </mesh>
+      ))}
     </group>
   )
 }
