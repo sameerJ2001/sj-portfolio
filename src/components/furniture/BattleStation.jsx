@@ -15,9 +15,10 @@ import Desktop from '../os/Desktop'
 // floats above it so visitors know to click it first.
 // Zoom in and the big CRT boots SJ-OS (components/os) — a real, clickable desktop on the glass.
 // Local: wall behind (-z), the setup faces +z. The screen's spot comes from the 'pc' zone in zones.js.
-const desk = { color: '#7b817f', roughness: 0.7, metalness: 0.25 }
-const beige = { color: '#a39c8b', roughness: 0.75 }
-const beigeDark = { color: '#857e6e', roughness: 0.75 }
+const desk = { color: '#8a8f8c', roughness: 0.6, metalness: 0.2 }
+const beige = { color: '#8f887d', roughness: 0.6 }
+const beigeDark = { color: '#756f65', roughness: 0.65 }
+const tan = { color: '#a68e80', roughness: 0.6 }
 const bezel = { color: '#2a2a26', roughness: 0.6 }
 const OS_W = 800
 const OS_H = 600
@@ -64,7 +65,7 @@ export default function BattleStation({ zone }) {
   return (
     <group>
       {/* Green phosphor spill onto SJ and the desk */}
-      <pointLight position={[0, 1.15, 0.2]} color="#4dff8a" intensity={1.4} distance={2.2} />
+      <pointLight position={[0, 1.25, 0.12]} color="#4dff8a" intensity={0.55} distance={1.3} />
 
       {/* Small floating marker: click me first */}
       <mesh ref={gem} position={[0, 2.25, -0.4]}>
@@ -137,6 +138,13 @@ export default function BattleStation({ zone }) {
       {/* Small CRT stacked on top, set back */}
       <group position={[-0.06, sy + sh / 2 + 0.08, sz - 0.24]}>
         <Box args={[0.36, 0.28, 0.3]} r={0.025} mat={beige} position={[0, 0.14, 0]} />
+        {[-0.08, 0.06].map((x) => (
+          <Box key={x} args={[0.06, 0.035, 0.06]} r={0.01} mat={beigeDark} position={[x, 0.295, -0.04]} />
+        ))}
+        <mesh position={[0.15, 0.04, 0.152]}>
+          <planeGeometry args={[0.016, 0.016]} />
+          <meshBasicMaterial color={[2.5, 0.3, 0.3]} toneMapped={false} />
+        </mesh>
         <Box args={[0.28, 0.2, 0.02]} r={0.006} mat={bezel} position={[0, 0.145, 0.151]} />
         <mesh position={[0, 0.145, 0.163]}>
           <planeGeometry args={[0.24, 0.17]} />
@@ -166,31 +174,31 @@ export default function BattleStation({ zone }) {
 
       {/* Second terminal on the floor past the end of the desk, angled to the room: a beige case with a
           green graphics screen, a vent grille, and its keyboard lying in front */}
-      <group position={[1.38, 0, 0.42]} rotation-y={-0.55}>
-        <Box args={[0.6, 0.4, 0.46]} r={0.03} mat={beige} position={[0, 0.2, 0]} />
-        <Box args={[0.6, 0.06, 0.4]} r={0.02} mat={beigeDark} position={[0, 0.43, -0.02]} />
-        {[-0.12, 0, 0.12].map((x) => (
-          <Box key={x} args={[0.07, 0.04, 0.1]} r={0.01} mat={beigeDark} position={[x + 0.1, 0.48, -0.08]} />
+      <group position={[1.42, 0, 0.42]} rotation-y={-0.55}>
+        <Box args={[0.74, 0.42, 0.6]} r={0.03} mat={tan} position={[0, 0.21, -0.06]} />
+        <Box args={[0.66, 0.05, 0.4]} r={0.02} mat={{ ...tan, color: '#967f72' }} position={[0.02, 0.445, -0.1]} />
+        {[[-0.16, -0.14, 0.16], [0.16, -0.14, 0.16]].map(([x, z, w]) => (
+          <Box key={`${x}${z}`} args={[w, 0.05, 0.1]} r={0.012} mat={{ ...tan, color: '#b29a8b' }} position={[x, 0.49, z]} />
         ))}
-        <mesh position={[-0.09, 0.22, 0.231]}>
+        <mesh position={[-0.11, 0.22, 0.243]}>
           <planeGeometry args={[0.34, 0.26]} />
           <meshStandardMaterial {...bezel} />
         </mesh>
-        <mesh position={[-0.09, 0.22, 0.233]}>
+        <mesh position={[-0.11, 0.22, 0.246]}>
           <planeGeometry args={[0.3, 0.225]} />
           <meshBasicMaterial map={graph.texture} color={[1.15, 1.15, 1.15]} toneMapped={false} />
         </mesh>
         {[0.1, 0.16, 0.22, 0.28].map((y) => (
-          <mesh key={y} position={[0.2, y, 0.231]}>
+          <mesh key={y} position={[0.22, y, 0.243]}>
             <planeGeometry args={[0.12, 0.02]} />
             <meshStandardMaterial {...bezel} />
           </mesh>
         ))}
-        <mesh position={[0.2, 0.36, 0.232]}>
+        <mesh position={[0.22, 0.36, 0.244]}>
           <planeGeometry args={[0.018, 0.018]} />
           <meshBasicMaterial color={[2.5, 0.3, 0.3]} toneMapped={false} />
         </mesh>
-        <pointLight position={[-0.09, 0.25, 0.45]} color="#4dff8a" intensity={0.8} distance={1.4} />
+        <pointLight position={[-0.11, 0.25, 0.55]} color="#4dff8a" intensity={0.8} distance={1.4} />
         <group position={[-0.05, 0, 0.42]} rotation-y={0.25}>
           <Box args={[0.46, 0.035, 0.16]} r={0.01} mat={beige} position={[0, 0.018, 0]} />
           {Array.from({ length: 3 }).map((_, row) => (
@@ -206,11 +214,15 @@ export default function BattleStation({ zone }) {
       <group ref={chair} position={[0, 0, 0.55]}>
         <Box args={[0.52, 0.08, 0.48]} r={0.03} mat={{ color: '#2f383b', roughness: 0.8 }} position={[0, 0.46, 0]} />
         <Box args={[0.46, 0.66, 0.08]} r={0.035} mat={{ color: '#2f383b', roughness: 0.8 }} position={[0, 0.86, 0.26]} rotation-x={-0.08} />
+        {[-0.13, 0, 0.13].map((x) => (
+          <Box key={x} args={[0.1, 0.56, 0.03]} r={0.012} mat={{ color: '#262e31', roughness: 0.8 }} position={[x, 0.87, 0.215]} rotation-x={-0.08} />
+        ))}
         <Box args={[0.1, 0.06, 0.04]} r={0.01} mat={{ color: '#4a5559', roughness: 0.6 }} position={[0, 0.55, 0.25]} />
         {[-0.29, 0.29].map((x) => (
           <group key={x} position={[x, 0, 0.02]}>
-            <Box args={[0.06, 0.04, 0.28]} r={0.015} mat={{ color: '#3c4649', roughness: 0.7 }} position={[0, 0.64, 0]} />
-            <Box args={[0.03, 0.15, 0.03]} r={0.006} mat={{ color: '#4a5559', roughness: 0.6 }} position={[0, 0.55, 0.06]} />
+            <Box args={[0.05, 0.04, 0.28]} r={0.015} mat={{ color: '#7d9599', roughness: 0.35, metalness: 0.5 }} position={[0, 0.64, 0]} />
+            <Box args={[0.03, 0.15, 0.03]} r={0.006} mat={{ color: '#7d9599', roughness: 0.35, metalness: 0.5 }} position={[0, 0.55, 0.1]} />
+            <Box args={[0.03, 0.15, 0.03]} r={0.006} mat={{ color: '#7d9599', roughness: 0.35, metalness: 0.5 }} position={[0, 0.55, -0.1]} />
           </group>
         ))}
         <mesh position={[0, 0.25, 0]}>

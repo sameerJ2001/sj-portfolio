@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Environment, Lightformer, Sparkles } from '@react-three/drei'
-import { EffectComposer, Bloom, Outline, Selection, Vignette, ChromaticAberration, Noise } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Outline, Selection, Vignette, ChromaticAberration, Noise, N8AO } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import { Vector2 } from 'three'
 import { useStore } from '../store'
@@ -49,8 +49,8 @@ function Ambience({ lightsOn }) {
   })
   return (
     <>
-      <ambientLight ref={amb} color="#9aa2c2" />
-      <hemisphereLight ref={hemi} args={['#8e9ccc', '#2b2522']} />
+      <ambientLight ref={amb} color="#8fb4c0" />
+      <hemisphereLight ref={hemi} args={['#6fb3b6', '#2a2226']} />
     </>
   )
 }
@@ -89,6 +89,8 @@ export default function Scene() {
         <Character />
 
         <EffectComposer multisampling={4} autoClear={false}>
+          {/* soft contact shadows in every crease, like the reference's voxel render */}
+          <N8AO aoRadius={0.5} distanceFalloff={0.6} intensity={2.6} color="#05080a" quality="medium" halfRes />
           <Outline visibleEdgeColor={0xffd86b} hiddenEdgeColor={0xffd86b} edgeStrength={6} blur />
           <Bloom luminanceThreshold={0.6} luminanceSmoothing={0.3} intensity={1.7} mipmapBlur />
           <ChromaticAberration offset={aberration} />

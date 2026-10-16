@@ -68,10 +68,22 @@ export default function Room() {
         <meshStandardMaterial color={C.metal} />
       </mesh>
       {[-2.6, -0.9, 0.8, 2.5].map((z) => (
-        <mesh key={z} position={[-3.29, WALL_H - 0.3, z]} rotation-y={Math.PI / 2}>
-          <planeGeometry args={[0.9, 0.36]} />
-          <meshStandardMaterial color="#2a2638" />
-        </mesh>
+        <group key={z} position={[-3.29, WALL_H - 0.3, z]} rotation-y={Math.PI / 2}>
+          <mesh position={[0, 0, 0.012]}>
+            <boxGeometry args={[0.9, 0.38, 0.03]} />
+            <meshStandardMaterial color="#3d4c4f" roughness={0.5} metalness={0.3} />
+          </mesh>
+          <mesh position={[0, 0, 0.014]}>
+            <planeGeometry args={[0.8, 0.3]} />
+            <meshStandardMaterial color="#0e1213" />
+          </mesh>
+          {Array.from({ length: 7 }).map((_, i) => (
+            <mesh key={i} position={[0, -0.12 + i * 0.04, 0.03]} rotation-x={0.6}>
+              <boxGeometry args={[0.8, 0.028, 0.008]} />
+              <meshStandardMaterial color="#56686b" roughness={0.45} metalness={0.3} />
+            </mesh>
+          ))}
+        </group>
       ))}
       <mesh position={[0.2, WALL_H - 0.15, -3.8]}>
         <boxGeometry args={[7.6, 0.3, 0.4]} />

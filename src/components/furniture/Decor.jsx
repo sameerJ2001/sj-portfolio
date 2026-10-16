@@ -140,13 +140,13 @@ function redSpillTexture() {
 // Two big stacked industrial cooling units beside the desk, like the reference: grey metal housings
 // with an inset frame and corner bolts, and a turbine-style rotor of radial fins spinning in each.
 // Local: wall behind (-z), rotors face +z.
-const FINS = 16
+const FINS = 22
 function TwinFans() {
   const rotors = useRef([])
   useFrame((_, dt) => rotors.current.forEach((r, i) => r && (r.rotation.z -= dt * (i ? 1.5 : 1.9))))
   const S = 1.15
-  const housing = { color: '#66767a', metalness: 0.2, roughness: 0.75 }
-  const fin = { color: '#4c5659', metalness: 0.25, roughness: 0.7 }
+  const housing = { color: '#4d6366', metalness: 0.35, roughness: 0.42 }
+  const fin = { color: '#8e999b', metalness: 0.3, roughness: 0.5 }
   // front plate with the round opening the rotor sits in
   const plate = useMemo(() => {
     const sh = new Shape()
@@ -180,7 +180,7 @@ function TwinFans() {
           ].map(([x, y, w, h], k) => (
             <mesh key={k} position={[x, y, 0.435]}>
               <boxGeometry args={[w, h, 0.03]} />
-              <meshStandardMaterial color="#57666a" metalness={0.2} roughness={0.75} />
+              <meshStandardMaterial color="#43585b" metalness={0.35} roughness={0.45} />
             </mesh>
           ))}
           {[-1, 1].flatMap((x) => [-1, 1].map((y) => [x, y])).map(([x, y]) => (
@@ -189,6 +189,10 @@ function TwinFans() {
               <meshStandardMaterial color="#3a4244" metalness={0.6} />
             </mesh>
           ))}
+          {/* embossed panel on the side that faces the room's front */}
+          <RoundedBox args={[0.02, S - 0.3, 0.42]} radius={0.008} smoothness={2} position={[-S / 2 - 0.005, 0, -0.12]}>
+            <meshStandardMaterial {...housing} color="#577073" />
+          </RoundedBox>
           {/* recessed well */}
           <mesh position={[0, 0, 0.428]}>
             <ringGeometry args={[0.44, 0.5, 40]} />
@@ -202,19 +206,23 @@ function TwinFans() {
           <group ref={(g) => (rotors.current[i] = g)} position={[0, 0, 0.32]}>
             {Array.from({ length: FINS }).map((_, k) => (
               <group key={k} rotation-z={(k / FINS) * Math.PI * 2}>
-                <mesh position={[0, 0.29, 0]} rotation-y={0.35} castShadow>
-                  <boxGeometry args={[0.1, 0.29, 0.03]} />
+                <mesh position={[0, 0.31, 0]} rotation-y={0.25} castShadow>
+                  <boxGeometry args={[0.075, 0.27, 0.025]} />
                   <meshStandardMaterial {...fin} />
                 </mesh>
               </group>
             ))}
             <mesh rotation-x={Math.PI / 2}>
-              <cylinderGeometry args={[0.15, 0.15, 0.05, 24]} />
-              <meshStandardMaterial color="#5f6b6e" metalness={0.25} roughness={0.65} />
+              <cylinderGeometry args={[0.17, 0.17, 0.04, 28]} />
+              <meshStandardMaterial color="#7d888a" metalness={0.3} roughness={0.5} />
             </mesh>
-            <mesh position={[0, 0, 0.03]} rotation-x={Math.PI / 2}>
-              <cylinderGeometry args={[0.07, 0.09, 0.04, 20]} />
-              <meshStandardMaterial color="#4a5355" metalness={0.6} />
+            <mesh position={[0, 0, 0.022]} rotation-x={Math.PI / 2}>
+              <cylinderGeometry args={[0.12, 0.12, 0.012, 24]} />
+              <meshStandardMaterial color="#1a2022" roughness={0.6} />
+            </mesh>
+            <mesh position={[0, 0, 0.045]}>
+              <boxGeometry args={[0.07, 0.07, 0.05]} />
+              <meshStandardMaterial color="#2c3436" roughness={0.6} />
             </mesh>
           </group>
         </group>
@@ -224,7 +232,7 @@ function TwinFans() {
 }
 
 // Two wall shelves of books above the desk. Local: wall at -z, x runs along the wall.
-const BOOK_COLORS = ['#34466a', '#2f5a4a', '#5e3434', '#6a6a58', '#46465a', '#7a6a4a', '#2a3a4a', '#8a8478']
+const BOOK_COLORS = ['#3d6a9a', '#3f7a4f', '#8a3a3a', '#b9b6aa', '#5a5f8a', '#a38a4a', '#2f4f6a', '#6f8f4a', '#8f6a8a']
 function Bookshelf() {
   const books = useMemo(() => {
     let s = 11
@@ -246,10 +254,9 @@ function Bookshelf() {
     <group>
       {[1.9, 2.34].map((y) => (
         <group key={y}>
-          <mesh position={[0, y, 0.15]} castShadow receiveShadow>
-            <boxGeometry args={[1.7, 0.04, 0.32]} />
-            <meshStandardMaterial color="#5f6b6e" roughness={0.7} metalness={0.25} />
-          </mesh>
+          <RoundedBox args={[1.74, 0.05, 0.34]} radius={0.012} smoothness={2} position={[0, y, 0.16]} castShadow receiveShadow>
+            <meshStandardMaterial color="#a9b8ba" roughness={0.28} metalness={0.35} />
+          </RoundedBox>
           {[-0.75, 0.75].map((x) => (
             <mesh key={x} position={[x, y - 0.07, 0.06]} castShadow>
               <boxGeometry args={[0.03, 0.12, 0.12]} />
@@ -258,11 +265,15 @@ function Bookshelf() {
           ))}
         </group>
       ))}
-      {/* a grey storage box on the top shelf */}
-      <mesh position={[0.58, 2.36 + 0.08, 0.14]} rotation-y={0.1} castShadow>
-        <boxGeometry args={[0.3, 0.16, 0.24]} />
-        <meshStandardMaterial color="#6b7477" roughness={0.75} />
-      </mesh>
+      {/* end uprights, and a teal storage box lying on the top shelf */}
+      {[-0.86, 0.86].map((x) => (
+        <RoundedBox key={x} args={[0.03, 0.62, 0.3]} radius={0.008} smoothness={2} position={[x, 2.12, 0.16]} castShadow>
+          <meshStandardMaterial color="#8d9c9e" roughness={0.35} metalness={0.35} />
+        </RoundedBox>
+      ))}
+      <RoundedBox args={[0.34, 0.1, 0.24]} radius={0.015} smoothness={2} position={[0.55, 2.36 + 0.075, 0.15]} rotation-y={0.08} castShadow>
+        <meshStandardMaterial color="#3f7f8a" roughness={0.5} />
+      </RoundedBox>
       {books.map((b, i) => (
         <mesh key={i} position={[b.x, [1.92, 2.36][b.shelf] + b.h / 2, 0.15]} castShadow>
           <boxGeometry args={[b.w, b.h, 0.22]} />
@@ -283,7 +294,7 @@ function UpperBrick() {
   return (
     <mesh position={[-3.995, UP + 1.25, 1.8]} rotation-y={Math.PI / 2} receiveShadow>
       <planeGeometry args={[4.4, 2.5]} />
-      <meshStandardMaterial map={brick} color="#7a6c68" roughness={0.95} />
+      <meshStandardMaterial map={brick} color="#4a3e3c" roughness={0.95} />
     </mesh>
   )
 }
