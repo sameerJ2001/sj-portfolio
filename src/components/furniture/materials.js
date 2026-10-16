@@ -181,6 +181,37 @@ export function makeWallTexture() {
   return repeatTexture(c, 4, 3)
 }
 
+// Polished dark stone (terrazzo / granite) for the bar: charcoal with fine light and dark fleck, a few
+// bigger chips and faint veins. Full colour; pair with a low-roughness, clear-coated material.
+export function makeStoneTexture() {
+  const S = 512
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const g = c.getContext('2d')
+  const rnd = seeded(31)
+  g.fillStyle = '#26272c'
+  g.fillRect(0, 0, S, S)
+  grime(g, S, rnd, 14, 'rgba(60,64,74,', 0.35)
+  grime(g, S, rnd, 10, 'rgba(10,10,14,', 0.35)
+  g.strokeStyle = 'rgba(120,124,135,0.12)'
+  g.lineWidth = 1.2
+  for (let k = 0; k < 6; k++) {
+    let x = rnd() * S
+    let y = rnd() * S
+    g.beginPath()
+    g.moveTo(x, y)
+    for (let n = 0; n < 12; n++) g.lineTo((x += 20 + rnd() * 30), (y += (rnd() - 0.5) * 40))
+    g.stroke()
+  }
+  for (let i = 0; i < 9000; i++) {
+    const v = rnd()
+    g.fillStyle = v < 0.5 ? `rgba(180,184,195,${0.2 + rnd() * 0.5})` : v < 0.85 ? `rgba(0,0,0,${0.3 + rnd() * 0.4})` : `rgba(120,95,110,${0.3 + rnd() * 0.4})`
+    const sz = rnd() < 0.92 ? 1 : 2 + rnd() * 2
+    g.fillRect(rnd() * S, rnd() * S, sz, sz)
+  }
+  return repeatTexture(c, 1, 1)
+}
+
 // Old red brick (used behind the kitchen under the desk deck). Coloured, not tinted.
 export function makeBrickTexture() {
   const c = document.createElement('canvas')
