@@ -85,7 +85,7 @@ export default function Scene() {
       {/* Warm work lights: under the desk wing (kitchen) and over the piano */}
       {lightsOn && (
         <>
-          <pointLight position={[-2.8, 2.1, 2.2]} color="#ffb070" intensity={4} distance={5} />
+          <pointLight position={[-2.8, 2.1, 2.2]} color="#ffb070" intensity={2} distance={5} />
           <pointLight position={[piano[0], 3.6, piano[2]]} color="#ffcf8a" intensity={5} distance={6} />
         </>
       )}

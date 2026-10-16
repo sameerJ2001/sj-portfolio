@@ -6,6 +6,7 @@ import { UP, WALL_H } from '../../data/zones'
 import { C, PAINT, makeBrickTexture, makeConcreteTexture, makeNeonSignTexture, makePaintingTexture, makeSplatterTexture } from './materials'
 import CeilingFan from './CeilingFan'
 import VoxelModel from '../VoxelModel'
+import Pipe from './Pipe'
 
 // Non-clickable set dressing, laid out to match the reference room.
 // Upstairs (desk wing): twin spinning cooling rotors, bookshelf over the desk. (The arcades are zones: Arcade.jsx.)
@@ -278,7 +279,7 @@ function NeonWall() {
       {/* brick behind the kitchen */}
       <mesh position={[-2.45, (UP - 0.4) / 2, 0.004]} receiveShadow>
         <planeGeometry args={[2.9, UP - 0.4]} />
-        <meshStandardMaterial map={brick} roughness={0.95} />
+        <meshStandardMaterial map={brick} color="#9a8a86" roughness={0.95} />
       </mesh>
       {/* dark panel behind the sign, between the fridge and the bar (like the reference) */}
       <mesh position={[-0.15, (UP - 0.4) / 2, 0.006]} receiveShadow>
@@ -291,11 +292,14 @@ function NeonWall() {
       </mesh>
       <pointLight position={[-0.25, 0.95, 0.5]} color={C.pink} intensity={2.5} distance={3} />
 
-      {/* vertical cyan tube */}
-      <mesh position={[0.4, 1.3, 0.06]}>
-        <boxGeometry args={[0.05, 2.2, 0.05]} />
-        <meshBasicMaterial color={C.cyan} toneMapped={false} />
-      </mesh>
+      {/* double vertical cyan tube */}
+      {[0.34, 0.46].map((x) => (
+        <mesh key={x} position={[x, 1.3, 0.06]}>
+          <cylinderGeometry args={[0.022, 0.022, 2.2, 10]} />
+          <meshBasicMaterial color={[0.6, 2.4, 2.6]} toneMapped={false} />
+        </mesh>
+      ))}
+      <pointLight position={[0.4, 1.4, 0.4]} color={C.cyan} intensity={1.5} distance={2.2} />
 
       {/* wooden slats from the tube back toward the corner */}
       {Array.from({ length: 7 }).map((_, i) => (
@@ -308,65 +312,128 @@ function NeonWall() {
   )
 }
 
-// Long dark bar counter sticking out from the left wall, with three pink-topped stools on its front.
+// Black bar sticking out from the left wall, like the reference: glossy top, red light strips at
+// both ends, glasses, cans, an ashtray, a spiky plant by the wall, a pipe along the floor in front,
+// and three bar stools (metal frame, footrest, cushion with a backrest lip; two pink, one grey).
 function Bar() {
+  const red = <meshBasicMaterial color="#ff2a3c" toneMapped={false} />
   return (
     <group>
-      <mesh position={[0, 0.48, 0]} castShadow receiveShadow>
-        <boxGeometry args={[2.5, 0.96, 0.6]} />
-        <meshStandardMaterial color="#1d1b24" roughness={0.5} />
+      <mesh position={[0, 0.46, -0.02]} castShadow receiveShadow>
+        <boxGeometry args={[2.4, 0.92, 0.52]} />
+        <meshStandardMaterial color="#16151b" roughness={0.55} />
       </mesh>
-      <mesh position={[0, 0.99, 0.02]} castShadow>
-        <boxGeometry args={[2.6, 0.06, 0.7]} />
-        <meshStandardMaterial color="#2b2834" roughness={0.3} metalness={0.3} />
+      <mesh position={[0, 0.95, 0.02]} castShadow receiveShadow>
+        <boxGeometry args={[2.56, 0.06, 0.7]} />
+        <meshStandardMaterial color="#1f1e26" roughness={0.18} metalness={0.4} />
       </mesh>
-      {/* red glow strips on the front */}
-      {[-1.0, 1.0].map((x) => (
-        <mesh key={x} position={[x, 0.45, 0.305]}>
-          <planeGeometry args={[0.03, 0.5]} />
-          <meshBasicMaterial color="#ff2a3c" toneMapped={false} />
-        </mesh>
-      ))}
-      {/* glasses + a little plant */}
-      {[-0.6, -0.35, 0.5].map((x) => (
-        <mesh key={x} position={[x, 1.07, 0]}>
-          <cylinderGeometry args={[0.04, 0.035, 0.1, 10]} />
-          <meshStandardMaterial color="#cfe8ff" transparent opacity={0.6} />
-        </mesh>
-      ))}
-      <mesh position={[-1.0, 1.1, -0.1]}>
-        <cylinderGeometry args={[0.07, 0.06, 0.16, 10]} />
-        <meshStandardMaterial color="#3a2a22" />
-      </mesh>
-      <mesh position={[-1.0, 1.32, -0.1]}>
-        <coneGeometry args={[0.14, 0.32, 6]} />
-        <meshStandardMaterial color="#2f6b45" />
-      </mesh>
-
-      {/* stools */}
-      {[-0.75, 0, 0.75].map((x) => (
-        <group key={x} position={[x, 0, 0.62]}>
-          <mesh position={[0, 0.66, 0]} castShadow>
-            <boxGeometry args={[0.4, 0.06, 0.34]} />
-            <meshStandardMaterial color="#ff7ad1" emissive="#a0306f" emissiveIntensity={0.3} />
+      {/* red light strips on both ends: front corner + end face */}
+      {[-1, 1].map((side) => (
+        <group key={side}>
+          <mesh position={[side * 1.08, 0.46, 0.245]}>
+            <planeGeometry args={[0.03, 0.62]} />
+            {red}
           </mesh>
-          {[
-            [-0.15, -0.12],
-            [0.15, -0.12],
-            [-0.15, 0.12],
-            [0.15, 0.12],
-          ].map(([lx, lz]) => (
-            <mesh key={`${lx}${lz}`} position={[lx, 0.32, lz]}>
-              <boxGeometry args={[0.035, 0.64, 0.035]} />
-              <meshStandardMaterial color={C.metal} />
-            </mesh>
-          ))}
-          <mesh position={[0, 0.25, 0]}>
-            <boxGeometry args={[0.32, 0.03, 0.26]} />
-            <meshStandardMaterial color={C.metal} />
+          <mesh position={[side * 1.201, 0.46, 0.08]} rotation-y={(side * Math.PI) / 2}>
+            <planeGeometry args={[0.03, 0.62]} />
+            {red}
           </mesh>
         </group>
       ))}
+      <pointLight position={[1.25, 0.4, 0.4]} color="#ff2a3c" intensity={1.2} distance={1.6} />
+
+      {/* glasses, cans, ashtray, bottle */}
+      {[[-0.55, 0.05], [-0.38, -0.08], [0.42, 0.02]].map(([x, z]) => (
+        <mesh key={x} position={[x, 1.03, z]}>
+          <cylinderGeometry args={[0.04, 0.033, 0.1, 12]} />
+          <meshStandardMaterial color="#cfe8ff" transparent opacity={0.45} roughness={0.05} metalness={0.2} />
+        </mesh>
+      ))}
+      {[[0.25, -0.1], [0.62, 0.08]].map(([x, z]) => (
+        <mesh key={x} position={[x, 1.04, z]} castShadow>
+          <cylinderGeometry args={[0.033, 0.033, 0.12, 12]} />
+          <meshStandardMaterial color="#c8282e" metalness={0.5} roughness={0.35} />
+        </mesh>
+      ))}
+      <mesh position={[0.0, 0.99, 0.05]}>
+        <cylinderGeometry args={[0.075, 0.065, 0.025, 16]} />
+        <meshStandardMaterial color="#2b2a30" roughness={0.4} metalness={0.5} />
+      </mesh>
+      <mesh position={[-0.15, 1.06, -0.15]} castShadow>
+        <cylinderGeometry args={[0.035, 0.04, 0.2, 10]} />
+        <meshStandardMaterial color="#2c5a3a" roughness={0.15} transparent opacity={0.85} />
+      </mesh>
+
+      {/* spiky plant by the wall */}
+      <group position={[-1.0, 0.98, -0.12]}>
+        <mesh castShadow>
+          <cylinderGeometry args={[0.08, 0.065, 0.16, 12]} />
+          <meshStandardMaterial color="#26232c" roughness={0.6} />
+        </mesh>
+        {Array.from({ length: 9 }).map((_, i) => {
+          const a = (i / 9) * Math.PI * 2
+          const tilt = 0.18 + (i % 3) * 0.12
+          const h = 0.35 + (i % 4) * 0.08
+          return (
+            <mesh key={i} position={[Math.cos(a) * 0.03, 0.08 + h / 2, Math.sin(a) * 0.03]} rotation={[Math.sin(a) * tilt, a, -Math.cos(a) * tilt]} castShadow>
+              <boxGeometry args={[0.035, h, 0.01]} />
+              <meshStandardMaterial color={i % 2 ? '#1f4a33' : '#163826'} roughness={0.7} />
+            </mesh>
+          )
+        })}
+      </group>
+
+      {/* pipe along the floor in front of the bar */}
+      <Pipe color={C.pipe} radius={0.04} bend={0.06} points={[[-1.3, 0.05, 0.32], [1.15, 0.05, 0.32], [1.15, 0.05, 0.75]]} />
+
+      {/* bar stools */}
+      {[
+        [-0.75, '#ff7ad1'],
+        [0.0, '#ff7ad1'],
+        [0.75, '#9aa0a6'],
+      ].map(([x, seat]) => (
+        <BarStool key={x} position={[x, 0, 0.66]} seat={seat} />
+      ))}
+    </group>
+  )
+}
+
+function BarStool({ seat, ...props }) {
+  const metal = <meshStandardMaterial color="#6b7277" metalness={0.6} roughness={0.35} />
+  const pink = seat !== '#9aa0a6'
+  return (
+    <group {...props}>
+      {[
+        [-0.15, -0.13],
+        [0.15, -0.13],
+        [-0.15, 0.13],
+        [0.15, 0.13],
+      ].map(([x, z]) => (
+        <mesh key={`${x}${z}`} position={[x, 0.33, z]} castShadow>
+          <boxGeometry args={[0.035, 0.66, 0.035]} />
+          {metal}
+        </mesh>
+      ))}
+      {/* footrest */}
+      {[-0.13, 0.13].map((z) => (
+        <mesh key={z} position={[0, 0.24, z]}>
+          <boxGeometry args={[0.32, 0.025, 0.025]} />
+          {metal}
+        </mesh>
+      ))}
+      <mesh position={[0, 0.665, 0]} castShadow>
+        <boxGeometry args={[0.4, 0.03, 0.34]} />
+        {metal}
+      </mesh>
+      {/* cushion + backrest lip */}
+      <mesh position={[0, 0.71, 0.01]} castShadow>
+        <boxGeometry args={[0.38, 0.06, 0.3]} />
+        <meshStandardMaterial color={seat} roughness={0.6} emissive={pink ? '#8a2060' : '#000'} emissiveIntensity={pink ? 0.35 : 0} />
+      </mesh>
+      <mesh position={[0, 0.78, -0.16]} castShadow>
+        <boxGeometry args={[0.38, 0.12, 0.04]} />
+        {metal}
+      </mesh>
     </group>
   )
 }

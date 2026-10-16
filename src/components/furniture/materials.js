@@ -34,16 +34,91 @@ export const C = {
 // Procedural textures so there are no image files yet.
 // Replace with your own painted/pixel textures later (/public/textures).
 
-// Speckled concrete with faint large tiles (ground floor). White-ish so `color` tints it.
+// Ground floor: dark worn concrete in big 1.2 m slabs, each a slightly different shade, with speckle,
+// grime patches and the odd crack. Full colour (use with color white). One texture = 2.4 m square.
 export function makeFloorTexture() {
-  const c = speckle(256, 0.55)
+  const S = 1024
+  const c = document.createElement('canvas')
+  c.width = c.height = S
   const g = c.getContext('2d')
-  g.fillStyle = 'rgba(0,0,0,0.22)'
-  for (let i = 0; i <= 2; i++) {
-    g.fillRect(0, i * 128, 256, 2)
-    g.fillRect(i * 128, 0, 2, 256)
+  const rnd = seeded(21)
+  const slab = S / 2
+  for (let i = 0; i < 2; i++)
+    for (let j = 0; j < 2; j++) {
+      const v = 46 + rnd() * 12
+      g.fillStyle = `rgb(${v + 2}, ${v}, ${v + 3})`
+      g.fillRect(i * slab, j * slab, slab, slab)
+    }
+  grime(g, S, rnd, 26, 'rgba(10,8,12,', 0.35)
+  grime(g, S, rnd, 10, 'rgba(120,110,105,', 0.08)
+  dust(g, S, rnd, 9000)
+  // cracks
+  g.strokeStyle = 'rgba(12,10,14,0.55)'
+  g.lineWidth = 1.5
+  for (let k = 0; k < 5; k++) {
+    let x = rnd() * S
+    let y = rnd() * S
+    g.beginPath()
+    g.moveTo(x, y)
+    for (let n = 0; n < 9; n++) g.lineTo((x += (rnd() - 0.5) * 60), (y += (rnd() - 0.5) * 60))
+    g.stroke()
   }
-  return repeatTexture(c, 3, 3)
+  // slab joints
+  g.fillStyle = 'rgba(8,7,10,0.75)'
+  for (const p of [0, slab]) {
+    g.fillRect(p, 0, 4, S)
+    g.fillRect(0, p, S, 4)
+  }
+  return repeatTexture(c, 1, 1)
+}
+
+// Kitchen + bar floor: small mauve-pink tiles, each its own shade, dark grout, a little dirt.
+// One texture = 2.4 m square (12 x 12 tiles of 20 cm).
+export function makeKitchenTileTexture() {
+  const S = 1024
+  const N = 12
+  const t = S / N
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const g = c.getContext('2d')
+  const rnd = seeded(5)
+  g.fillStyle = '#251a24'
+  g.fillRect(0, 0, S, S)
+  for (let i = 0; i < N; i++)
+    for (let j = 0; j < N; j++) {
+      const k = rnd()
+      const base = k < 0.15 ? [120, 78, 108] : k < 0.3 ? [72, 50, 70] : [92 + rnd() * 16, 62 + rnd() * 10, 86 + rnd() * 14]
+      g.fillStyle = `rgb(${base.map(Math.round).join(',')})`
+      g.fillRect(i * t + 3, j * t + 3, t - 6, t - 6)
+      g.fillStyle = 'rgba(255,255,255,0.06)'
+      g.fillRect(i * t + 3, j * t + 3, t - 6, 3)
+    }
+  grime(g, S, rnd, 18, 'rgba(20,10,18,', 0.3)
+  dust(g, S, rnd, 5000)
+  return repeatTexture(c, 1, 1)
+}
+
+function seeded(seed) {
+  let s = seed
+  return () => ((s = (s * 9301 + 49297) % 233280) / 233280)
+}
+function grime(g, S, rnd, n, rgba, max) {
+  for (let i = 0; i < n; i++) {
+    const x = rnd() * S
+    const y = rnd() * S
+    const r = 40 + rnd() * 160
+    const grad = g.createRadialGradient(x, y, 0, x, y, r)
+    grad.addColorStop(0, rgba + (max * (0.4 + rnd() * 0.6)).toFixed(3) + ')')
+    grad.addColorStop(1, rgba + '0)')
+    g.fillStyle = grad
+    g.fillRect(x - r, y - r, r * 2, r * 2)
+  }
+}
+function dust(g, S, rnd, n) {
+  for (let i = 0; i < n; i++) {
+    g.fillStyle = rnd() < 0.5 ? `rgba(0,0,0,${0.1 + rnd() * 0.25})` : `rgba(255,255,255,${0.04 + rnd() * 0.08})`
+    g.fillRect(rnd() * S, rnd() * S, 1 + rnd() * 2, 1 + rnd() * 2)
+  }
 }
 
 // Plain speckled concrete/asphalt for the upper decks (like the reference).

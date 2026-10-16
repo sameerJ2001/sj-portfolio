@@ -3,9 +3,13 @@ import { useTexture } from '@react-three/drei'
 import { MeshStandardMaterial, RepeatWrapping, SRGBColorSpace } from 'three'
 import { useStore } from '../../store'
 import { UP, WALL_H, DESK_DECK, BACK_DECK, BRIDGE, STAIRS, WINDOW, zoneById } from '../../data/zones'
-import { C, makeDeckTexture, makeFloorTexture, makeWallTexture } from './materials'
+import { C, makeDeckTexture, makeFloorTexture, makeKitchenTileTexture, makeWallTexture } from './materials'
 import Pipe from './Pipe'
 import Decor from './Decor'
+
+// Where the kitchen/bar tiles end (they start at the left wall and run to the front of the room)
+const TILE_X1 = -1.0
+const TILE_Z0 = -1.6
 
 // The cutaway cube: ground floor, two walls, the two upper platforms (the desk deck hung on teal
 // pipework, and the back deck along the back wall, joined by a short bridge), the long stair up the
@@ -13,20 +17,29 @@ import Decor from './Decor'
 // All the non-clickable props (arcades, fans, bar, bathroom, boilers…) live in Decor.jsx.
 export default function Room() {
   const goHome = useStore((s) => s.goHome)
-  const floorTex = useMemo(makeFloorTexture, [])
+  const floorTex = useMemo(() => {
+    const t = makeFloorTexture()
+    t.repeat.set(8 / 2.4, 8 / 2.4) // one texture covers 2.4 m
+    return t
+  }, [])
+  const tileTex = useMemo(() => {
+    const t = makeKitchenTileTexture()
+    t.repeat.set((TILE_X1 + 4) / 2.4, (4 - TILE_Z0) / 2.4)
+    return t
+  }, [])
   const wallTex = useMemo(makeWallTexture, [])
 
   return (
     <group>
-      {/* Ground floor — clicking empty floor returns to the overview */}
+      {/* Ground floor (dark worn concrete) — clicking empty floor returns to the overview */}
       <mesh rotation-x={-Math.PI / 2} receiveShadow onClick={goHome}>
         <planeGeometry args={[8, 8]} />
-        <meshStandardMaterial map={floorTex} color={C.floor} roughness={0.6} />
+        <meshStandardMaterial map={floorTex} roughness={0.85} />
       </mesh>
-      {/* Pink tiles under the kitchen + bar */}
-      <mesh rotation-x={-Math.PI / 2} position={[-2.8, 0.004, 1.4]} receiveShadow>
-        <planeGeometry args={[2.4, 5.2]} />
-        <meshStandardMaterial color="#5b4556" roughness={0.4} />
+      {/* Small pink tiles under the kitchen + bar */}
+      <mesh rotation-x={-Math.PI / 2} position={[(-4 + TILE_X1) / 2, 0.004, (TILE_Z0 + 4) / 2]} receiveShadow>
+        <planeGeometry args={[TILE_X1 + 4, 4 - TILE_Z0]} />
+        <meshStandardMaterial map={tileTex} roughness={0.45} metalness={0.05} />
       </mesh>
       {/* Base block */}
       <mesh position={[0, -0.25, 0]} receiveShadow>
