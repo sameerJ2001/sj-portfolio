@@ -6,7 +6,7 @@ import { ARCADE_GAMES } from './content'
 //   - the BACK DECK: a slab along the whole back wall, holding the arcades, photo wall, bed and AC
 // with a gap between them, joined only by a short BRIDGE along the left wall. The long stair comes
 // up the right side of the room to the back deck. The front-right is open double height (piano).
-// SJ sits at the gold PC on the desk deck. Clicking an object flies the camera to it.
+// SJ sits at the PC on the desk deck. Clicking an object flies the camera to it.
 // "Screen" zones (the PC and the two arcades) fly the camera straight at the glass instead, and the
 // screen becomes usable: SJ-OS on the PC, a game on each arcade.
 //
@@ -42,9 +42,9 @@ export const ZONES = [
     label: 'Battle station',
     blurb: 'SJ-OS: projects, terminal, about',
     main: true,
-    // Desk against the left wall under the bookshelf, CRT facing into the room
+    // Desk against the left wall under the bookshelf, CRT (on its desktop case) facing into the room
     place: [-3.05, UP, 1.2, Math.PI / 2],
-    screen: { local: [0, 1.09, -0.296], size: [0.507, 0.38] },
+    screen: { local: [0, 1.17, -0.296], size: [0.507, 0.38] },
   },
   {
     id: 'arcade-blue',

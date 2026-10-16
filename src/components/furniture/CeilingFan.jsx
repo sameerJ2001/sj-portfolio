@@ -24,8 +24,8 @@ export default function CeilingFan({ wall, drop }) {
     const b = blades.current
     b.rotation.y += dt * SPEED
     const on = lightsOn ? 1 : 0
-    spot.current.intensity = 48 * on
-    glow.current.intensity = 1.2 * on
+    spot.current.intensity = 14 * on
+    glow.current.intensity = 0.9 * on
     bulb.current.color.setScalar(on ? 2.2 : 0.25)
   })
 

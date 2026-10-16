@@ -1,11 +1,12 @@
 import { useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Environment, Lightformer, Sparkles } from '@react-three/drei'
-import { EffectComposer, Bloom, Outline, Selection, Vignette, ChromaticAberration } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Outline, Selection, Vignette, ChromaticAberration, Noise } from '@react-three/postprocessing'
+import { BlendFunction } from 'postprocessing'
 import { Vector2 } from 'three'
 import { useStore } from '../store'
 import { env } from '../lib/environment'
-import { ZONES, UP, zoneById } from '../data/zones'
+import { ZONES, UP } from '../data/zones'
 import CameraRig from './CameraRig'
 import Character from './Character'
 import Zone from './Zone'
@@ -36,15 +37,15 @@ const FURNITURE = {
 
 const aberration = new Vector2(0.0006, 0.0006)
 
-// Fill light for the whole room: cool industrial grey-blue at night, lifted a little in daytime (less when overcast),
-// and flashed by lightning.
+// Very low fill so the room reads in the dark: almost all the light comes from things that glow
+// (neon signs, screens, lamps, the window). Lifted a little in daytime, flashed by lightning.
 function Ambience({ lightsOn }) {
   const amb = useRef()
   const hemi = useRef()
   useFrame(() => {
     const day = env.daylight * (1 - env.cloud * 0.5)
-    amb.current.intensity = (lightsOn ? 0.85 : 0.4) + day * 0.5 + env.flash * 1.5
-    hemi.current.intensity = (lightsOn ? 0.95 : 0.45) + day * 0.55
+    amb.current.intensity = (lightsOn ? 0.2 : 0.1) + day * 0.4 + env.flash * 1.5
+    hemi.current.intensity = (lightsOn ? 0.28 : 0.14) + day * 0.45
   })
   return (
     <>
@@ -53,7 +54,6 @@ function Ambience({ lightsOn }) {
     </>
   )
 }
-const piano = zoneById('piano').place
 
 export default function Scene() {
   const lightsOn = useStore((s) => s.lightsOn)
@@ -62,33 +62,16 @@ export default function Scene() {
     <Canvas gl={{ preserveDrawingBuffer: import.meta.env.DEV }} shadows="percentage" dpr={[1, 2]} camera={{ fov: 30, near: 0.1, far: 200 }}>
       <color attach="background" args={['#0b0a14']} />
 
-      {/* Soft reflections for the gold and metal — built in, no HDR download */}
-      <Environment resolution={256}>
+      {/* Faint neon-coloured reflections for the metal — kept low so they don't light the room */}
+      <Environment resolution={256} environmentIntensity={0.3}>
         <Lightformer intensity={1.2} position={[0, 5, 5]} scale={[10, 3, 1]} color="#ff7ad1" />
         <Lightformer intensity={1.2} position={[-5, 2, 0]} rotation-y={Math.PI / 2} scale={[8, 3, 1]} color="#5ee7ff" />
         <Lightformer intensity={0.8} position={[5, 3, -3]} rotation-y={-Math.PI / 2} scale={[6, 2, 1]} color="#ffcf6b" />
       </Environment>
 
       <Ambience lightsOn={lightsOn} />
-      <directionalLight
-        position={[6, 12, 6]}
-        intensity={lightsOn ? 1.6 : 0.6}
-        color="#b9c3ff"
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.0004}
-        shadow-camera-left={-7}
-        shadow-camera-right={7}
-        shadow-camera-top={7}
-        shadow-camera-bottom={-7}
-      />
-      {/* Warm work lights: under the desk wing (kitchen) and over the piano */}
-      {lightsOn && (
-        <>
-          <pointLight position={[-2.8, 2.1, 2.2]} color="#ffb070" intensity={2} distance={5} />
-          <pointLight position={[piano[0], 3.6, piano[2]]} color="#ffcf8a" intensity={5} distance={6} />
-        </>
-      )}
+      {/* a whisper of cool night air from above, so edges don't vanish completely */}
+      <directionalLight position={[6, 12, 6]} intensity={0.16} color="#8a96d0" />
 
       {/* Floating dust in the air */}
       <Sparkles count={60} scale={[8, UP * 2, 8]} position={[0, UP, 0]} size={1.5} speed={0.15} opacity={0.4} color="#c9b8ff" />
@@ -107,9 +90,10 @@ export default function Scene() {
 
         <EffectComposer multisampling={4} autoClear={false}>
           <Outline visibleEdgeColor={0xffd86b} hiddenEdgeColor={0xffd86b} edgeStrength={6} blur />
-          <Bloom luminanceThreshold={0.9} intensity={1.2} mipmapBlur />
+          <Bloom luminanceThreshold={0.6} luminanceSmoothing={0.3} intensity={1.7} mipmapBlur />
           <ChromaticAberration offset={aberration} />
-          <Vignette offset={0.3} darkness={0.45} />
+          <Noise blendFunction={BlendFunction.OVERLAY} opacity={0.12} />
+          <Vignette offset={0.3} darkness={0.6} />
         </EffectComposer>
       </Selection>
 

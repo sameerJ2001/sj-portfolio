@@ -223,24 +223,26 @@ export function createAttractScreen(title, color) {
   return { texture, tick }
 }
 
-// The little blue screen on top of the CRT: a static system monitor.
+// The little screen on top of the CRT: a static green-phosphor system monitor.
 export function makeStatusScreenTexture() {
   const W = 256
   const H = 192
   const { g, texture } = canvas(W, H)
   const bg = g.createLinearGradient(0, 0, 0, H)
-  bg.addColorStop(0, '#1d6fd1')
-  bg.addColorStop(1, '#0c3a8a')
+  bg.addColorStop(0, '#062414')
+  bg.addColorStop(1, '#03130a')
   g.fillStyle = bg
   g.fillRect(0, 0, W, H)
-  g.fillStyle = '#d8f1ff'
+  g.shadowColor = '#3dff9a'
+  g.shadowBlur = 6
+  g.fillStyle = '#7dffaa'
   g.font = 'bold 20px monospace'
   g.textBaseline = 'top'
   g.fillText('SYS  OK', 18, 16)
   ;[0.62, 0.38, 0.81].forEach((v, i) => {
-    g.fillStyle = 'rgba(216,241,255,0.25)'
+    g.fillStyle = 'rgba(125,255,170,0.18)'
     g.fillRect(18, 62 + i * 36, W - 36, 16)
-    g.fillStyle = '#d8f1ff'
+    g.fillStyle = '#7dffaa'
     g.fillRect(18, 62 + i * 36, (W - 36) * v, 16)
   })
   glass(g, W, H)

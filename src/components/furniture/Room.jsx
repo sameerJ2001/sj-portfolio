@@ -91,8 +91,6 @@ export default function Room() {
       </Suspense>
       <Decor />
 
-      {/* Under-deck glow so the ground floor reads */}
-      <pointLight position={[-2.6, 2.1, 0.2]} color={C.pink} intensity={6} distance={5} />
     </group>
   )
 }
@@ -145,6 +143,11 @@ const SLABS = [DESK_DECK, BACK_DECK, BRIDGE]
 function Mezzanine() {
   const goHome = useStore((s) => s.goHome)
   const deckTex = useMemo(makeDeckTexture, [])
+  const sideTex = useMemo(() => {
+    const t = makeWallTexture()
+    t.repeat.set(3, 0.6)
+    return t
+  }, [])
 
   return (
     <group>
@@ -157,7 +160,7 @@ function Mezzanine() {
           <group key={i}>
             <mesh position={[cx, UP - T / 2, cz]} castShadow receiveShadow>
               <boxGeometry args={[w, T, d]} />
-              <meshStandardMaterial color={C.metalDark} roughness={0.8} />
+              <meshStandardMaterial map={sideTex} color="#3a4546" roughness={0.9} />
             </mesh>
             <mesh position={[cx, UP + 0.002, cz]} rotation-x={-Math.PI / 2} receiveShadow onClick={goHome}>
               <planeGeometry args={[w, d]} />

@@ -51,7 +51,7 @@ export default function App() {
       )}
 
       {entered && !arrivedZone && (
-        <p className="hint">{activeZone ? '' : 'click anything in the loft — start with the gold PC ★'}</p>
+        <p className="hint">{activeZone ? '' : 'click anything in the loft — start with the PC ★'}</p>
       )}
 
       <Panel />

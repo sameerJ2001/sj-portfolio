@@ -238,7 +238,7 @@ export default function Arcade({ zone }) {
         <meshStandardMaterial color={dark} />
       </mesh>
 
-      <pointLight position={[0, 1.4, 0.8]} color={glow} intensity={0.9} distance={2} />
+      <pointLight position={[0, 1.4, 0.8]} color={glow} intensity={1.5} distance={2.2} />
     </group>
   )
 }

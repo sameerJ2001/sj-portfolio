@@ -485,7 +485,7 @@ function WindowLights() {
   useFrame(() => {
     const day = env.daylight
     glow.current.color.copy(PINK).lerp(env.skyLow, 0.35 + day * 0.65).lerp(SNOW_LIGHT, env.snowCover * 0.55).lerp(WHITE, env.flash * 0.6)
-    glow.current.intensity = 1.2 + day * 2.2 * (1 - env.cloud * 0.4) + env.flash * 30
+    glow.current.intensity = 0.7 + day * 1.6 * (1 - env.cloud * 0.4) + env.flash * 30
 
     // Beam comes from wherever the sun (or moon) is in the sky
     const sx = env.sunElev > 0 ? env.sunX : -env.sunX
@@ -494,7 +494,7 @@ function WindowLights() {
     beam.current.position.set(sx * 2.4, CY + 0.3 + elev * 1.0, -3.0)
     target.position.set(-sx * 0.7, 0, 2.2)
     beam.current.color.copy(env.light).lerp(WHITE, env.flash)
-    beam.current.intensity = env.lightAmount * 60 + env.flash * 80
+    beam.current.intensity = env.lightAmount * 20 + env.flash * 60
   })
 
   return (

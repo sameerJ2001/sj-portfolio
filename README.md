@@ -1,6 +1,6 @@
 # SJ's Loft — portfolio
 
-A two-level cyberpunk cutaway room. SJ sits at the gold PC on the upper floor, always working
+A two-level cyberpunk cutaway room. SJ sits at the PC on the upper floor, always working
 (typing, mouse, glancing, sipping coffee, stretching). Click anything and the camera flies to it.
 Click the PC and you sit down at a real, usable retro desktop (SJ-OS) on its CRT; click an arcade
 cabinet and its game plays right on the cabinet screen.
@@ -20,7 +20,7 @@ npm run build      # production build -> dist/
 | `src/data/zones.js` | **Start here.** Floor plan of both levels, deck height, every zone's position (`place`), camera shot (`focus`, `zoom`/`offset`), stairs, door, overview camera. SJ's seat is worked out from the PC's position. |
 | `src/data/content.js` | Your real content: projects, photos, about/contact links. |
 | `src/components/furniture/Room.jsx` | The cube: floors, walls (window opening), the two upper platforms (desk deck hung on teal pipework, back deck, bridge), the olive bed railing, the block stairs. |
-| `src/components/furniture/*.jsx` | One file per piece: `BattleStation` (gold desk + CRTs), `Arcade` (both cabinets), `GrandPiano`, `Window` (rainy city), `Bed`, `Kitchen`, `PhotoWall`, `Easel`, `GearCorner`, plus `Decor` (non-clickable props). |
+| `src/components/furniture/*.jsx` | One file per piece: `BattleStation` (desk + retro CRTs), `Arcade` (both cabinets), `GrandPiano`, `Window` (rainy city), `Bed`, `Kitchen`, `PhotoWall`, `Easel`, `GearCorner`, plus `Decor` (non-clickable props). |
 | `src/components/os/` | SJ-OS, the desktop on the PC screen: `Desktop.jsx` (apps, windows, taskbar, start menu), `Icon.jsx`, `os.css`. |
 | `src/components/ScreenHtml.jsx` | Mounts real DOM (SJ-OS, game iframes) onto a 3D screen. |
 | `src/lib/screens.js` | Animated idle screens: the green terminal on the CRT, arcade attract mode. |

@@ -5,7 +5,7 @@ import { CanvasTexture, SRGBColorSpace, RepeatWrapping } from 'three'
 export const C = {
   gold: '#e8b923',
   goldDeep: '#b8860b',
-  wall: '#4a4f52',
+  wall: '#56676a',
   wallPanel: '#2b2740',
   floor: '#4b4744',
   deck: '#3a393d',
@@ -126,11 +126,6 @@ export function makeDeckTexture() {
   return repeatTexture(speckle(256, 0.7), 3, 3)
 }
 
-// Concrete for the bathroom walls etc.
-export function makeConcreteTexture() {
-  return repeatTexture(speckle(256, 0.45), 2, 2)
-}
-
 function speckle(size, amount) {
   const c = document.createElement('canvas')
   c.width = c.height = size
@@ -155,30 +150,34 @@ function repeatTexture(c, rx, ry) {
   return t
 }
 
-// Riveted metal wall panels with a little grime.
+// Dark speckled concrete, like the reference's walls: heavy black + white fleck (granite-like), soft
+// mottling, faint form-work seams. White-ish so the material colour tints it. One repeat = ~2 m.
 export function makeWallTexture() {
-  const c = speckle(128, 0.25)
+  const S = 512
+  const c = document.createElement('canvas')
+  c.width = c.height = S
   const g = c.getContext('2d')
-  g.fillStyle = 'rgba(0,0,0,0.3)'
-  for (let i = 0; i < 2; i++) g.fillRect(i * 64, 0, 2, 128)
-  g.fillRect(0, 0, 128, 2)
-  g.fillRect(0, 64, 128, 2)
-  g.fillStyle = 'rgba(255,255,255,0.12)'
-  for (let i = 0; i < 2; i++) g.fillRect(i * 64 + 2, 0, 1, 128)
-  // rivets near each panel corner
-  for (const x of [6, 58, 70, 122])
-    for (const y of [6, 58, 70, 122]) {
-      g.fillStyle = 'rgba(0,0,0,0.35)'
-      g.fillRect(x, y, 3, 3)
-      g.fillStyle = 'rgba(255,255,255,0.25)'
-      g.fillRect(x, y, 1, 1)
-    }
-  // grime streaks
-  const grad = g.createLinearGradient(0, 100, 0, 128)
+  const rnd = seeded(13)
+  g.fillStyle = '#b4b4b4'
+  g.fillRect(0, 0, S, S)
+  grime(g, S, rnd, 22, 'rgba(0,0,0,', 0.22)
+  grime(g, S, rnd, 10, 'rgba(255,255,255,', 0.1)
+  for (let i = 0; i < 26000; i++) {
+    const v = rnd()
+    g.fillStyle = v < 0.55 ? `rgba(0,0,0,${0.25 + rnd() * 0.5})` : `rgba(255,255,255,${0.15 + rnd() * 0.45})`
+    const sz = rnd() < 0.85 ? 1 : 2
+    g.fillRect(Math.floor(rnd() * S), Math.floor(rnd() * S), sz, sz)
+  }
+  g.fillStyle = 'rgba(0,0,0,0.35)'
+  g.fillRect(0, 0, 2, S)
+  g.fillRect(S / 2, 0, 2, S)
+  g.fillRect(0, 0, S, 2)
+  // grime gathering toward the floor
+  const grad = g.createLinearGradient(0, S * 0.75, 0, S)
   grad.addColorStop(0, 'rgba(0,0,0,0)')
-  grad.addColorStop(1, 'rgba(0,0,0,0.18)')
+  grad.addColorStop(1, 'rgba(0,0,0,0.25)')
   g.fillStyle = grad
-  g.fillRect(0, 100, 128, 28)
+  g.fillRect(0, S * 0.75, S, S * 0.25)
   return repeatTexture(c, 4, 3)
 }
 
