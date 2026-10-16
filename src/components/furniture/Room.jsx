@@ -1,7 +1,9 @@
-import { useMemo } from 'react'
+import { Suspense, useMemo } from 'react'
+import { useTexture } from '@react-three/drei'
+import { MeshStandardMaterial, RepeatWrapping, SRGBColorSpace } from 'three'
 import { useStore } from '../../store'
 import { UP, WALL_H, DESK_DECK, BACK_DECK, BRIDGE, STAIRS, WINDOW, zoneById } from '../../data/zones'
-import { C, makeDeckTexture, makeDotsTexture, makeFloorTexture, makeWallTexture } from './materials'
+import { C, makeDeckTexture, makeFloorTexture, makeWallTexture } from './materials'
 import Pipe from './Pipe'
 import Decor from './Decor'
 
@@ -71,7 +73,9 @@ export default function Room() {
       ))}
 
       <Mezzanine />
-      <Stairs />
+      <Suspense fallback={null}>
+        <Stairs />
+      </Suspense>
       <Decor />
 
       {/* Under-deck glow so the ground floor reads */}
@@ -227,8 +231,12 @@ function BedRail() {
   )
 }
 
-// Long steep stair, like the reference: solid teal-grey step blocks (sawtooth underneath) between
-// two olive stringers, the outer one perforated, and a plate at the top where it meets the deck.
+// Long steep stair, like the reference: teal-grey step blocks (sawtooth underneath) between two olive
+// rails, and a plate at the top where it meets the deck. The surfaces wear your painted textures from
+// public/textures/stairs (templates in reference/templates/stairs): one tread + one riser repeated on
+// every step, a 1 m rail strip repeated along both rails, and the landing plate.
+const STAIR_TEX = ['tread', 'riser', 'rail', 'landing'].map((n) => `/textures/stairs/stair-${n}.png`)
+
 function Stairs() {
   const { x, width, topZ, bottomZ } = STAIRS
   const steps = 16
@@ -236,67 +244,50 @@ function Stairs() {
   const rise = UP / steps
   const len = Math.hypot(UP, bottomZ - topZ)
   const angle = Math.atan2(UP, bottomZ - topZ)
-  const dots = useMemo(() => {
-    const t = makeDotsTexture()
-    t.repeat.set(len / 0.07, 1)
-    return t
-  }, [len])
+  const [tread, riser, rail, landing] = useTexture(STAIR_TEX)
+
+  // Box faces are [+x, -x, +y (top), -y, +z (front), -z]
+  const mats = useMemo(() => {
+    for (const t of [tread, riser, rail, landing]) {
+      t.colorSpace = SRGBColorSpace
+      t.anisotropy = 8
+    }
+    rail.wrapS = RepeatWrapping
+    rail.repeat.set(len, 1) // the strip is 1 m long, so repeat it once per metre of rail
+    const m = (props) => new MeshStandardMaterial({ roughness: 0.7, metalness: 0.15, ...props })
+    const steel = m({ color: '#4c787c' })
+    const olive = m({ color: C.olive, metalness: 0.4, roughness: 0.5 })
+    const railFace = m({ map: rail, metalness: 0.3, roughness: 0.55 })
+    return {
+      step: [steel, steel, m({ map: tread }), steel, m({ map: riser }), steel],
+      rail: [railFace, railFace, olive, olive, olive, olive],
+      landing: [steel, steel, m({ map: landing }), steel, steel, steel],
+    }
+  }, [tread, riser, rail, landing, len])
 
   return (
     <group position={[x, 0, 0]}>
-      {Array.from({ length: steps - 1 }).map((_, i) => {
-        const front = bottomZ - i * run
-        return (
-          <group key={i} position={[0, (i + 0.5) * rise, front - run / 2]}>
-            <mesh castShadow receiveShadow>
-              <boxGeometry args={[width, rise, run]} />
-              <meshStandardMaterial color="#4c787c" roughness={0.6} metalness={0.2} />
-            </mesh>
-            {/* lighter tread + nosing */}
-            <mesh position={[0, rise / 2 + 0.004, 0]} receiveShadow>
-              <boxGeometry args={[width, 0.008, run]} />
-              <meshStandardMaterial color="#6d9ea2" roughness={0.6} />
-            </mesh>
-            <mesh position={[0, rise / 2 - 0.01, run / 2 + 0.002]}>
-              <boxGeometry args={[width, 0.03, 0.006]} />
-              <meshStandardMaterial color="#8fbcbe" />
-            </mesh>
-          </group>
-        )
-      })}
-      {/* olive stringers either side */}
-      {[-1, 1].map((side) => (
-        <group key={side} position={[side * (width / 2 + 0.022), UP / 2 + rise * 0.45, (topZ + bottomZ) / 2]} rotation-x={angle}>
-          <mesh castShadow>
-            <boxGeometry args={[0.04, 0.17, len]} />
-            <meshStandardMaterial color={C.olive} metalness={0.45} roughness={0.45} />
-          </mesh>
-          {side > 0 && (
-            <mesh position={[0.021, -0.05, 0]} rotation-y={Math.PI / 2}>
-              <planeGeometry args={[len, 0.04]} />
-              <meshStandardMaterial map={dots} color={C.olive} metalness={0.45} roughness={0.45} />
-            </mesh>
-          )}
-        </group>
-      ))}
-      {/* landing plate at the top, with a light rim */}
-      <group position={[0, UP + 0.015, topZ - 0.2]}>
-        <mesh receiveShadow castShadow>
-          <boxGeometry args={[width + 0.14, 0.03, 0.4]} />
-          <meshStandardMaterial color="#6d9ea2" roughness={0.6} />
+      {Array.from({ length: steps - 1 }).map((_, i) => (
+        <mesh key={i} position={[0, (i + 0.5) * rise, bottomZ - i * run - run / 2]} material={mats.step} castShadow receiveShadow>
+          <boxGeometry args={[width, rise, run]} />
         </mesh>
-        {[
-          [0, 0.2, width + 0.14, 0.03],
-          [0, -0.2, width + 0.14, 0.03],
-          [(width + 0.14) / 2, 0, 0.03, 0.4],
-          [-(width + 0.14) / 2, 0, 0.03, 0.4],
-        ].map(([px, pz, w, d], i) => (
-          <mesh key={i} position={[px, 0.018, pz]}>
-            <boxGeometry args={[w, 0.012, d]} />
-            <meshStandardMaterial color="#d8c98a" />
-          </mesh>
-        ))}
-      </group>
+      ))}
+      {/* olive rails either side */}
+      {[-1, 1].map((side) => (
+        <mesh
+          key={side}
+          position={[side * (width / 2 + 0.022), UP / 2 + rise * 0.45, (topZ + bottomZ) / 2]}
+          rotation-x={angle}
+          material={mats.rail}
+          castShadow
+        >
+          <boxGeometry args={[0.04, 0.17, len]} />
+        </mesh>
+      ))}
+      {/* landing plate at the top */}
+      <mesh position={[0, UP + 0.015, topZ - 0.2]} material={mats.landing} receiveShadow castShadow>
+        <boxGeometry args={[width + 0.14, 0.03, 0.4]} />
+      </mesh>
     </group>
   )
 }

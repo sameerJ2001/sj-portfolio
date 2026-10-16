@@ -126,19 +126,6 @@ export function makeBrickTexture() {
   return repeatTexture(c, 3, 2)
 }
 
-// A row of dark holes, for the perforated stair stringer.
-export function makeDotsTexture() {
-  const c = document.createElement('canvas')
-  c.width = 32
-  c.height = 16
-  const g = c.getContext('2d')
-  g.fillStyle = '#ffffff'
-  g.fillRect(0, 0, 32, 16)
-  g.fillStyle = '#1a1a14'
-  g.fillRect(12, 5, 7, 6)
-  return repeatTexture(c, 1, 1)
-}
-
 // The framed neon sign under the desk deck: "SJ" in katakana (エス / ジェイ), stacked inside a
 // rounded neon frame like the reference. Redraws once the Japanese font has loaded.
 const JP_FONT = '"Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif'
