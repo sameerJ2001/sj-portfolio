@@ -1,9 +1,9 @@
 import { Suspense, useMemo } from 'react'
 import { useTexture } from '@react-three/drei'
-import { MeshStandardMaterial, RepeatWrapping, SRGBColorSpace } from 'three'
+import { Color, MeshBasicMaterial, MeshPhysicalMaterial, RepeatWrapping, SRGBColorSpace } from 'three'
 import { useStore } from '../../store'
 import { UP, WALL_H, DESK_DECK, BACK_DECK, BRIDGE, STAIRS, WINDOW, zoneById } from '../../data/zones'
-import { C, makeDeckTexture, makeFloorTexture, makeKitchenTileTexture, makeWallTexture } from './materials'
+import { C, K, makeDeckTexture, makeFloorTexture, makeKitchenTileTexture, makeWallTexture } from './materials'
 import Pipe from './Pipe'
 import Decor from './Decor'
 
@@ -266,7 +266,7 @@ function BedRail() {
 }
 
 // Long steep stair, like the reference: teal-grey step blocks (sawtooth underneath) between two olive
-// rails, and a plate at the top where it meets the deck. The surfaces wear your painted textures from
+// rails, and a plate at the top where it meets the deck, all in glossy metal. The surfaces wear your painted textures from
 // public/textures/stairs (templates in reference/templates/stairs): one tread + one riser repeated on
 // every step, a 1 m rail strip repeated along both rails, and the landing plate.
 const STAIR_TEX = ['tread', 'riser', 'rail', 'landing'].map((n) => `/textures/stairs/stair-${n}.png`)
@@ -280,6 +280,8 @@ function Stairs() {
   const angle = Math.atan2(UP, bottomZ - topZ)
   const [tread, riser, rail, landing] = useTexture(STAIR_TEX)
 
+  const ledMat = useMemo(() => new MeshBasicMaterial({ color: new Color(0.3, 1.7, 1.9), toneMapped: false }), [])
+
   // Box faces are [+x, -x, +y (top), -y, +z (front), -z]
   const mats = useMemo(() => {
     for (const t of [tread, riser, rail, landing]) {
@@ -288,14 +290,17 @@ function Stairs() {
     }
     rail.wrapS = RepeatWrapping
     rail.repeat.set(len, 1) // the strip is 1 m long, so repeat it once per metre of rail
-    const m = (props) => new MeshStandardMaterial({ roughness: 0.7, metalness: 0.15, ...props })
-    const steel = m({ color: '#4c787c' })
-    const olive = m({ color: C.olive, metalness: 0.4, roughness: 0.5 })
-    const railFace = m({ map: rail, metalness: 0.3, roughness: 0.55 })
+    // Glossy metal, like the rest of the room: diamond-plate steel treads + landing (the painted pattern
+    // doubles as relief so it glints), painted-metal risers, and clear-coated olive rails.
+    const m = (props) => new MeshPhysicalMaterial(props)
+    const steel = m({ ...K.painted('#4c787c'), metalness: 0.3 })
+    const plate = (map) => m({ ...K.painted('#ffffff'), map, bumpMap: map, bumpScale: 1.2, metalness: 0.35, roughness: 0.32, envMapIntensity: 2.4 })
+    const olive = m({ ...K.painted(C.olive), metalness: 0.35 })
+    const railFace = m({ ...K.painted('#ffffff'), map: rail, metalness: 0.35 })
     return {
-      step: [steel, steel, m({ map: tread }), steel, m({ map: riser }), steel],
+      step: [steel, steel, plate(tread), steel, m({ ...K.painted('#ffffff'), map: riser, metalness: 0.3 }), steel],
       rail: [railFace, railFace, olive, olive, olive, olive],
-      landing: [steel, steel, m({ map: landing }), steel, steel, steel],
+      landing: [steel, steel, plate(landing), steel, steel, steel],
     }
   }, [tread, riser, rail, landing, len])
 
@@ -304,6 +309,10 @@ function Stairs() {
       {Array.from({ length: steps - 1 }).map((_, i) => (
         <mesh key={i} position={[0, (i + 0.5) * rise, bottomZ - i * run - run / 2]} material={mats.step} castShadow receiveShadow>
           <boxGeometry args={[width, rise, run]} />
+          {/* thin cyan LED just under each step's front edge */}
+          <mesh position={[0, rise / 2 - 0.018, run / 2 + 0.002]} material={ledMat}>
+            <planeGeometry args={[width * 0.9, 0.008]} />
+          </mesh>
         </mesh>
       ))}
       {/* olive rails either side */}
