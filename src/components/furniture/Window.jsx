@@ -14,6 +14,7 @@ import {
   Vector3,
 } from 'three'
 import { WINDOW } from '../../data/zones'
+import { useStore } from '../../store'
 import { env, tickEnvironment } from '../../lib/environment'
 import {
   makeBolt,
@@ -36,14 +37,15 @@ import { C } from './materials'
 // city light at night, bright cream by day, dimmer under cloud), rain runs down the glass and
 // lightning flashes through. Behind the frost is the outside scene (forest, city skyline, sky, sun,
 // moon, weather), faintly visible. Light pours in and casts shadows into the room.
-// SHUTTER = true brings back the venetian shutter that raises, lowers and tilts on its own.
+// A venetian shutter opens and closes at random times through the day, and rolls up out of the way
+// whenever you click the window (SHUTTER = false removes it).
 // Local: wall face at z ≈ 0, room is +z, outside is -z. Weather/time live in lib/environment.js.
 const { w: W, h: H, cy: CY, chamfer: CH } = WINDOW
 const HW = W / 2
 const HH = H / 2
 const TOP = CY + HH
 const BOT = CY - HH
-const SHUTTER = false
+const SHUTTER = true
 const WALL_BACK = -0.17 // back face of the wall, in this local space
 
 // The opening: a rectangle with its corners cut off, counter-clockwise
@@ -259,22 +261,18 @@ function PinBoard() {
 const SLATS = 15
 const SLAT_D = 0.085
 const RAIL = 0.07 // headrail height
-// Moves the shutter picks between: how far raised (1 = all the way up) and slat tilt (0 = open)
-const MOVES = {
-  day: [
-    { open: 1, tilt: 0 },
-    { open: 0.55, tilt: 0.15 },
-    { open: 0.3, tilt: 0.35 },
-    { open: 0, tilt: 0.2 },
-  ],
-  night: [
-    { open: 0, tilt: 1.3 },
-    { open: 0, tilt: 0.85 },
-    { open: 0.45, tilt: 0.6 },
-    { open: 1, tilt: 0 },
-  ],
-}
-const SHUTTER_SECONDS = [10, 28]
+// Positions the shutter picks between at random, any time of day: how far raised (1 = all the way
+// up) and slat tilt (0 = slats open, 1.3 = shut). Weighted so it's mostly fully open or fully shut.
+const MOVES = [
+  [{ open: 1, tilt: 0 }, 3],
+  [{ open: 0, tilt: 1.3 }, 2],
+  [{ open: 0, tilt: 0.2 }, 1.5],
+  [{ open: 0.5, tilt: 0.25 }, 1],
+  [{ open: 0.3, tilt: 0.6 }, 1],
+]
+const MOVES_TOTAL = MOVES.reduce((a, [, w]) => a + w, 0)
+const OUT_OF_THE_WAY = { open: 1, tilt: 0 }
+const SHUTTER_SECONDS = [15, 45] // how long it stays put before moving again
 
 // Half-width of the opening at height y (narrower where the corners are cut)
 const halfWidthAt = (y) => HW - Math.max(0, CH - (TOP - y), CH - (y - BOT))
@@ -287,20 +285,25 @@ function Shutter() {
 
   useFrame((_, dt) => {
     const s = st.current
-    // Pick a new position every so often; mostly closed at night, mostly open by day
-    if (env.shutter) s.to = env.shutter
+    // Clicking the window rolls the shutter up out of the way; otherwise it moves at random
+    const atWindow = useStore.getState().activeZone === 'window'
+    if (atWindow) {
+      s.to = OUT_OF_THE_WAY
+      s.timer = 4 // after you leave, wait a moment before it starts moving again
+    } else if (env.shutter) s.to = env.shutter
     else if ((s.timer -= dt) <= 0) {
-      const moves = Math.random() < env.daylight ? MOVES.day : MOVES.night
       let next
-      do next = moves[Math.floor(Math.random() * moves.length)]
-      while (next.open === s.to.open && next.tilt === s.to.tilt)
+      do {
+        let r = Math.random() * MOVES_TOTAL
+        next = MOVES.find(([, w]) => (r -= w) < 0)[0]
+      } while (next === s.to)
       s.to = next
       s.timer = SHUTTER_SECONDS[0] + Math.random() * (SHUTTER_SECONDS[1] - SHUTTER_SECONDS[0])
     }
-    // Motor speed: constant, like a real blind
+    // Motor speed: constant, like a real blind (quick when it's getting out of your way)
     const step = (v, to, speed) => v + Math.sign(to - v) * Math.min(Math.abs(to - v), speed * dt)
-    s.open = step(s.open, s.to.open, 0.16)
-    s.tilt = step(s.tilt, s.to.tilt, 0.7)
+    s.open = step(s.open, s.to.open, atWindow ? 0.7 : 0.16)
+    s.tilt = step(s.tilt, s.to.tilt, atWindow ? 2.5 : 0.7)
 
     const railY = TOP - RAIL
     const bottomY = railY - 0.02 - (1 - s.open) * (H - RAIL - 0.06)
