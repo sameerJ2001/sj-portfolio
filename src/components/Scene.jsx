@@ -62,8 +62,8 @@ export default function Scene() {
     <Canvas gl={{ preserveDrawingBuffer: import.meta.env.DEV }} shadows="percentage" dpr={[1, 2]} camera={{ fov: 30, near: 0.1, far: 200 }}>
       <color attach="background" args={['#0b0a14']} />
 
-      {/* Faint neon-coloured reflections for the metal — kept low so they don't light the room */}
-      <Environment resolution={256} environmentIntensity={0.3}>
+      {/* Neon-coloured reflections for the polished metal and glossy surfaces */}
+      <Environment resolution={256} environmentIntensity={0.55}>
         <Lightformer intensity={1.2} position={[0, 5, 5]} scale={[10, 3, 1]} color="#ff7ad1" />
         <Lightformer intensity={1.2} position={[-5, 2, 0]} rotation-y={Math.PI / 2} scale={[8, 3, 1]} color="#5ee7ff" />
         <Lightformer intensity={0.8} position={[5, 3, -3]} rotation-y={-Math.PI / 2} scale={[6, 2, 1]} color="#ffcf6b" />

@@ -11,7 +11,7 @@ export const C = {
   deck: '#3a393d',
   metal: '#56605f',
   metalDark: '#2e3335',
-  pipe: '#5f8f93', // teal pipework on the desk deck
+  pipe: '#aebbbf', // stainless-steel pipework (faintly cool)
   olive: '#a0923f', // stair stringers + bed railing
   wood: '#6b4a3a',
   woodDark: '#3e2a22',
@@ -29,6 +29,25 @@ export const C = {
   navy: '#1f2a4a',
   hoodie: '#d9772b',
   white: '#e6e6ee',
+}
+
+// Shared "sleek sci-fi" material kit (the look of the bar + stools): spread into a
+// <meshPhysicalMaterial {...K.satin('#6d7e85')} /> so every piece of furniture feels like one set.
+export const K = {
+  // satin brushed metal: soft, broad highlights
+  satin: (color = '#6d7e85') => ({ color, metalness: 0.6, roughness: 0.3 }),
+  // dark gunmetal with a light clear coat
+  gunmetal: (color = '#25272e') => ({ color, metalness: 0.45, roughness: 0.28, clearcoat: 0.5, clearcoatRoughness: 0.2 }),
+  // glossy lacquered panels (fridge, cabinets, arcades, piano)
+  lacquer: (color) => ({ color, metalness: 0.15, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.08 }),
+  // polished stainless steel: pipes, tanks, conduits, housings
+  steel: (color = '#c3cdd1', roughness = 0.16) => ({ color, metalness: 0.9, roughness, clearcoat: 0.6, clearcoatRoughness: 0.08, envMapIntensity: 3.6 }),
+  // glossy painted metal: machinery housings that keep their colour under a hard clear coat
+  painted: (color) => ({ color, metalness: 0.4, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.1, envMapIntensity: 1.6 }),
+  // chrome: taps, rails, trims
+  chrome: (color = '#c8d0d6') => ({ color, metalness: 0.95, roughness: 0.12 }),
+  // soft fabric with a little sheen (bedding, cushions)
+  fabric: (color) => ({ color, roughness: 0.85, sheen: 0.7, sheenRoughness: 0.5, sheenColor: '#ffffff' }),
 }
 
 // Procedural textures so there are no image files yet.

@@ -7,6 +7,7 @@ import { SEAT } from '../../data/zones'
 import { createGraphScreen, createTerminalScreen, makeStatusScreenTexture } from '../../lib/screens'
 import ScreenHtml from '../ScreenHtml'
 import Desktop from '../os/Desktop'
+import { K } from './materials'
 
 // The workstation, like the reference: a plain grey metal desk, a chunky beige retro computer (a big
 // green-phosphor CRT on a desktop case, a small CRT stacked on top, a keyboard), boxes underneath, a
@@ -15,7 +16,7 @@ import Desktop from '../os/Desktop'
 // floats above it so visitors know to click it first.
 // Zoom in and the big CRT boots SJ-OS (components/os) — a real, clickable desktop on the glass.
 // Local: wall behind (-z), the setup faces +z. The screen's spot comes from the 'pc' zone in zones.js.
-const desk = { color: '#8a8f8c', roughness: 0.6, metalness: 0.2 }
+const desk = K.satin('#858c8d')
 const beige = { color: '#8f887d', roughness: 0.6 }
 const beigeDark = { color: '#756f65', roughness: 0.65 }
 const tan = { color: '#a68e80', roughness: 0.6 }
@@ -30,7 +31,7 @@ const CHAIR_CENTRE = new Vector3(SEAT.position[0], SEAT.position[1] + 0.8, SEAT.
 function Box({ args, r = 0.012, mat, ...props }) {
   return (
     <RoundedBox args={args} radius={r} smoothness={2} castShadow receiveShadow {...props}>
-      <meshStandardMaterial {...mat} />
+      <meshPhysicalMaterial {...mat} />
     </RoundedBox>
   )
 }

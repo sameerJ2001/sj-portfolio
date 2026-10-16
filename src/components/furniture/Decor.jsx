@@ -4,8 +4,9 @@ import { AdditiveBlending, CanvasTexture, ExtrudeGeometry, MeshPhysicalMaterial,
 import { useFrame } from '@react-three/fiber'
 import { useStore } from '../../store'
 import { UP, WALL_H } from '../../data/zones'
-import { C, PAINT, makeBrickTexture, makeNeonSignTexture, makePaintingTexture, makeSplatterTexture, makeStoneTexture, makeWallTexture } from './materials'
+import { C, K, PAINT, makeBrickTexture, makeNeonSignTexture, makePaintingTexture, makeSplatterTexture, makeStoneTexture, makeWallTexture } from './materials'
 import CeilingFan from './CeilingFan'
+import RBox from './RBox'
 import VoxelModel from '../VoxelModel'
 import Pipe from './Pipe'
 
@@ -147,8 +148,8 @@ function TwinFans() {
   const rotors = useRef([])
   useFrame((_, dt) => rotors.current.forEach((r, i) => r && (r.rotation.z -= dt * (i ? 1.5 : 1.9))))
   const S = 1.15
-  const housing = { color: '#4d6366', metalness: 0.35, roughness: 0.42 }
-  const fin = { color: '#8e999b', metalness: 0.3, roughness: 0.5 }
+  const housing = K.painted('#5b7174')
+  const fin = K.steel('#b6c0c2', 0.2)
   // front plate with the round opening the rotor sits in
   const plate = useMemo(() => {
     const sh = new Shape()
@@ -168,10 +169,10 @@ function TwinFans() {
         <group key={i} position={[0, S / 2 + i * (S + 0.03), 0]}>
           <mesh position={[0, 0, -0.1]} castShadow receiveShadow>
             <boxGeometry args={[S, S, 0.65]} />
-            <meshStandardMaterial {...housing} />
+            <meshPhysicalMaterial {...housing} />
           </mesh>
           <mesh geometry={plate} position={[0, 0, 0.225]} castShadow receiveShadow>
-            <meshStandardMaterial {...housing} />
+            <meshPhysicalMaterial {...housing} />
           </mesh>
           {/* raised inset frame + corner bolts on the face */}
           {[
@@ -193,7 +194,7 @@ function TwinFans() {
           ))}
           {/* embossed panel on the side that faces the room's front */}
           <RoundedBox args={[0.02, S - 0.3, 0.42]} radius={0.008} smoothness={2} position={[-S / 2 - 0.005, 0, -0.12]}>
-            <meshStandardMaterial {...housing} color="#577073" />
+            <meshPhysicalMaterial {...housing} color="#6b8386" />
           </RoundedBox>
           {/* recessed well */}
           <mesh position={[0, 0, 0.428]}>
@@ -210,7 +211,7 @@ function TwinFans() {
               <group key={k} rotation-z={(k / FINS) * Math.PI * 2}>
                 <mesh position={[0, 0.31, 0]} rotation-y={0.25} castShadow>
                   <boxGeometry args={[0.075, 0.27, 0.025]} />
-                  <meshStandardMaterial {...fin} />
+                  <meshPhysicalMaterial {...fin} />
                 </mesh>
               </group>
             ))}
@@ -339,8 +340,8 @@ function acRoofGeometry() {
 }
 function WallAC() {
   const roof = useMemo(acRoofGeometry, [])
-  const body = { color: '#4a6165', metalness: 0.45, roughness: 0.42 }
-  const trim = { color: '#5d7a80', metalness: 0.45, roughness: 0.4 }
+  const body = K.painted('#5d7579')
+  const trim = K.painted('#7a9499')
   const dark = { color: '#141a1c', roughness: 0.6 }
   const top = AC_BASE + AC_H
   return (
@@ -349,20 +350,20 @@ function WallAC() {
 
       {/* body */}
       <RoundedBox args={[AC_W, AC_H, AC_D]} radius={0.025} smoothness={2} position={[0, AC_BASE + AC_H / 2, AC_Z]} castShadow receiveShadow>
-        <meshStandardMaterial {...body} />
+        <meshPhysicalMaterial {...body} />
       </RoundedBox>
 
       {/* ribbed roof sloping down to the front, overhanging a little */}
       <group position={[0, top, AC_Z]}>
         <mesh geometry={roof} castShadow receiveShadow>
-          <meshStandardMaterial {...trim} />
+          <meshPhysicalMaterial {...trim} />
         </mesh>
         {Array.from({ length: 7 }).map((_, i) => {
           const t = i / 6
           return (
             <mesh key={i} position={[0, 0.045 + 0.145 * (1 - t), -0.21 + 0.42 * t]} rotation-x={0.29} castShadow>
               <boxGeometry args={[AC_W + 0.08, 0.026, 0.032]} />
-              <meshStandardMaterial {...body} />
+              <meshPhysicalMaterial {...body} />
             </mesh>
           )
         })}
@@ -371,7 +372,7 @@ function WallAC() {
       {/* vent grille with drip stains running down from it */}
       <group position={[-0.04, AC_BASE + 0.72, AC_Z + AC_D / 2]}>
         <RoundedBox args={[0.42, 0.3, 0.035]} radius={0.012} smoothness={2} position={[0, 0, 0.01]}>
-          <meshStandardMaterial {...trim} />
+          <meshPhysicalMaterial {...trim} />
         </RoundedBox>
         <mesh position={[0, 0, 0.029]}>
           <planeGeometry args={[0.35, 0.23]} />
@@ -380,7 +381,7 @@ function WallAC() {
         {Array.from({ length: 6 }).map((_, i) => (
           <mesh key={i} position={[0, -0.095 + i * 0.038, 0.034]} rotation-x={0.5}>
             <boxGeometry args={[0.35, 0.02, 0.006]} />
-            <meshStandardMaterial {...trim} />
+            <meshPhysicalMaterial {...trim} />
           </mesh>
         ))}
         {[[-0.15, 0.1], [-0.09, 0.18], [-0.03, 0.08], [0.04, 0.14], [0.11, 0.06], [0.16, 0.11]].map(([x, l]) => (
@@ -395,7 +396,7 @@ function WallAC() {
       <group position={[AC_W / 2 + 0.003, AC_BASE + 0.66, AC_Z + 0.02]}>
         <mesh>
           <boxGeometry args={[0.012, 0.3, 0.16]} />
-          <meshStandardMaterial {...trim} />
+          <meshPhysicalMaterial {...trim} />
         </mesh>
         <mesh position={[0.007, 0, 0]}>
           <boxGeometry args={[0.004, 0.26, 0.12]} />
@@ -409,8 +410,8 @@ function WallAC() {
 // Two stacked rounded conduits along the base of a wall, with collar bands near each end.
 // Local: wall behind (-z), runs along x, centred on `x`.
 export function Conduits({ length, x = 0 }) {
-  const mat = { color: '#55707a', metalness: 0.4, roughness: 0.45 }
-  const collar = { color: '#6b8a92', metalness: 0.45, roughness: 0.4 }
+  const mat = K.steel('#9fb0b4', 0.18)
+  const collar = K.steel('#b9c6ca', 0.16)
   const tiers = [
     [length, 0.12, 0.56, 0.06, -0.0],
     [length - 0.08, 0.11, 0.5, 0.175, -0.03],
@@ -420,11 +421,11 @@ export function Conduits({ length, x = 0 }) {
       {tiers.map(([l, h, d, y, z]) => (
         <group key={y}>
           <RoundedBox args={[l, h, d]} radius={0.035} smoothness={3} position={[0, y, z]} castShadow receiveShadow>
-            <meshStandardMaterial {...mat} />
+            <meshPhysicalMaterial {...mat} />
           </RoundedBox>
           {[-1, 1].map((side) => (
             <RoundedBox key={side} args={[0.06, h + 0.03, d + 0.03]} radius={0.012} smoothness={2} position={[side * (l / 2 - 0.12), y, z]} castShadow>
-              <meshStandardMaterial {...collar} />
+              <meshPhysicalMaterial {...collar} />
             </RoundedBox>
           ))}
         </group>
@@ -512,9 +513,20 @@ function Bar() {
       ))}
       <pointLight position={[1.25, 0.45, 0.4]} color="#ff2a3c" intensity={1.2} distance={1.6} />
 
+      {/* chrome foot rail on brackets, and a soft pink underglow beneath the top's front edge */}
+      <Pipe color="#c8d0d6" radius={0.022} bend={0.05} points={[[-1.05, 0.33, 0.3], [1.05, 0.33, 0.3]]} />
+      {[-0.9, 0, 0.9].map((x) => (
+        <RBox key={x} args={[0.03, 0.03, 0.11]} r={0.01} m={K.chrome()} position={[x, 0.33, 0.245]} />
+      ))}
+      <mesh position={[0, 0.918, 0.34]} rotation-x={Math.PI / 2}>
+        <planeGeometry args={[2.36, 0.018]} />
+        <meshBasicMaterial color={[2.6, 0.6, 1.6]} toneMapped={false} />
+      </mesh>
+      <pointLight position={[0, 0.8, 0.45]} color="#ff5fb0" intensity={0.7} distance={1.4} />
+
       {/* two stacked collared pipes along the foot of the bar */}
       {[0.08, 0.21].map((y) => (
-        <Pipe key={y} color="#56707a" radius={0.06} bend={0.08} clampEvery={0.7} points={[[-1.17, y, 0.36], [1.32, y, 0.36]]} />
+        <Pipe key={y} color="#aebbbf" radius={0.06} bend={0.08} clampEvery={0.7} points={[[-1.17, y, 0.36], [1.32, y, 0.36]]} />
       ))}
 
       {/* big glass jar, glasses with red drinks, ashtray, bottle */}
@@ -580,13 +592,13 @@ function Bar() {
 
 // Sleek "spaceship" bar stool: a smooth tray seat with raised end rims cut with handle slots and a
 // padded inset (pink ones glow softly), on a satin metal frame of square legs with a footrest ring.
-const STOOL_METAL = { color: '#6d7e85', metalness: 0.55, roughness: 0.3 }
+const STOOL_METAL = K.satin('#6d7e85')
 function BarStool({ seat, ...props }) {
   const pad =
     seat === 'pink'
       ? { color: '#e070b8', roughness: 0.35, emissive: '#a02878', emissiveIntensity: 0.55 }
       : { color: '#8d969c', roughness: 0.35, metalness: 0.2 }
-  const metal = <meshStandardMaterial {...STOOL_METAL} />
+  const metal = <meshPhysicalMaterial {...STOOL_METAL} />
   const W = 0.46
   const D = 0.34
   const SEAT_Y = 0.68
@@ -880,8 +892,8 @@ function Alcove() {
 // up the sides, and in front of them a metal workbench with a slatted chair and a crate.
 const DECK_BOTTOM = UP - 0.4
 function Boilers() {
-  const metal = { color: '#7d9498', metalness: 0.5, roughness: 0.42 }
-  const band = { color: '#5c7276', metalness: 0.5, roughness: 0.5 }
+  const metal = K.steel('#b8c4c8', 0.28)
+  const band = K.steel('#93a3a7', 0.3)
   const H = DECK_BOTTOM - 0.12
   return (
     <group>
@@ -890,36 +902,36 @@ function Boilers() {
           {/* plinth, tank, ring bands */}
           <mesh position={[0, 0.06, 0]} castShadow receiveShadow>
             <cylinderGeometry args={[0.36, 0.38, 0.12, 24]} />
-            <meshStandardMaterial {...band} />
+            <meshPhysicalMaterial {...band} />
           </mesh>
           <mesh position={[0, 0.12 + (H - 0.3) / 2, 0]} castShadow receiveShadow>
             <cylinderGeometry args={[0.32, 0.32, H - 0.3, 24]} />
-            <meshStandardMaterial {...metal} />
+            <meshPhysicalMaterial {...metal} />
           </mesh>
           {[0.55, 1.2, 1.85].map((y) => (
             <group key={y} position={[0, y, 0]}>
               <mesh castShadow>
                 <cylinderGeometry args={[0.345, 0.345, 0.07, 24]} />
-                <meshStandardMaterial {...band} />
+                <meshPhysicalMaterial {...band} />
               </mesh>
               <mesh position={[0, 0.06, 0]}>
                 <cylinderGeometry args={[0.335, 0.335, 0.02, 24]} />
-                <meshStandardMaterial {...metal} />
+                <meshPhysicalMaterial {...metal} />
               </mesh>
             </group>
           ))}
           {/* stepped cap and a pipe up into the deck */}
           <mesh position={[0, H - 0.14, 0]} castShadow>
             <cylinderGeometry args={[0.27, 0.32, 0.08, 24]} />
-            <meshStandardMaterial {...metal} />
+            <meshPhysicalMaterial {...metal} />
           </mesh>
           <mesh position={[0, H - 0.07, 0]} castShadow>
             <cylinderGeometry args={[0.18, 0.24, 0.07, 20]} />
-            <meshStandardMaterial {...band} />
+            <meshPhysicalMaterial {...band} />
           </mesh>
           <mesh position={[0, (H + DECK_BOTTOM) / 2, 0]}>
             <cylinderGeometry args={[0.08, 0.08, DECK_BOTTOM - H + 0.04, 12]} />
-            <meshStandardMaterial {...metal} />
+            <meshPhysicalMaterial {...metal} />
           </mesh>
           {/* gauge */}
           <mesh position={[0, 1.5, 0.33]} rotation-x={Math.PI / 2}>
@@ -932,17 +944,23 @@ function Boilers() {
           </mesh>
         </group>
       ))}
+      {/* teal LED strip under the deck above the tanks, so the polished steel has something to catch */}
+      <mesh position={[0, DECK_BOTTOM - 0.03, 0.5]} rotation-z={Math.PI / 2}>
+        <cylinderGeometry args={[0.016, 0.016, 1.5, 10]} />
+        <meshBasicMaterial color={[0.4, 2.4, 2.2]} toneMapped={false} />
+      </mesh>
+      <pointLight position={[0, DECK_BOTTOM - 0.35, 0.75]} color="#3fe0d0" intensity={2.4} distance={3.2} />
       {/* thick collared pipes up both sides, joined by a pipe across under the deck */}
-      <Pipe color="#6f878b" radius={0.075} bend={0.14} clampEvery={0.55} points={[[-0.8, 0, 0.08], [-0.8, DECK_BOTTOM - 0.16, 0.08], [0.72, DECK_BOTTOM - 0.16, 0.08], [0.72, DECK_BOTTOM, 0.08]]} />
-      <Pipe color="#6f878b" radius={0.065} bend={0.14} clampEvery={0.55} points={[[0.68, 0.32, -0.2], [0.72, 0.32, -0.2], [0.72, 0.32, 0.22], [0.72, DECK_BOTTOM - 0.3, 0.22]]} />
+      <Pipe color="#a9b5b9" radius={0.075} bend={0.14} clampEvery={0.55} points={[[-0.8, 0, 0.08], [-0.8, DECK_BOTTOM - 0.16, 0.08], [0.72, DECK_BOTTOM - 0.16, 0.08], [0.72, DECK_BOTTOM, 0.08]]} />
+      <Pipe color="#a9b5b9" radius={0.065} bend={0.14} clampEvery={0.55} points={[[0.68, 0.32, -0.2], [0.72, 0.32, -0.2], [0.72, 0.32, 0.22], [0.72, DECK_BOTTOM - 0.3, 0.22]]} />
       {/* square-flanged stubs coming out low at the side */}
       {[0.16, 0.36].map((y) => (
         <group key={y} position={[0.66, y, 0.48]}>
           <RoundedBox args={[0.12, 0.12, 0.2]} radius={0.015} smoothness={2} castShadow>
-            <meshStandardMaterial color="#6f878b" metalness={0.5} roughness={0.42} />
+            <meshPhysicalMaterial {...K.steel('#a9b5b9')} />
           </RoundedBox>
           <RoundedBox args={[0.17, 0.17, 0.035]} radius={0.012} smoothness={2} position={[0, 0, 0.11]} castShadow>
-            <meshStandardMaterial color="#7d9498" metalness={0.5} roughness={0.4} />
+            <meshPhysicalMaterial {...K.steel('#b8c3c7')} />
           </RoundedBox>
           <mesh position={[0, 0, 0.129]}>
             <planeGeometry args={[0.07, 0.07]} />
@@ -955,24 +973,24 @@ function Boilers() {
 }
 
 function Workbench() {
-  const steel = { color: '#8a9ea2', metalness: 0.5, roughness: 0.45 }
-  const legs = { color: '#4a3a3e', metalness: 0.4, roughness: 0.5 }
+  const steel = K.satin('#8a9ea2')
+  const legs = K.gunmetal('#3a3036')
   return (
     <group>
       {/* table */}
       <mesh position={[0, 0.74, 0]} castShadow receiveShadow>
         <boxGeometry args={[1.0, 0.04, 0.56]} />
-        <meshStandardMaterial {...steel} />
+        <meshPhysicalMaterial {...steel} />
       </mesh>
       {[-0.45, 0.45].flatMap((x) => [-0.23, 0.23].map((z) => [x, z])).map(([x, z]) => (
         <mesh key={`${x}${z}`} position={[x, 0.36, z]} castShadow>
           <boxGeometry args={[0.04, 0.72, 0.04]} />
-          <meshStandardMaterial {...legs} />
+          <meshPhysicalMaterial {...legs} />
         </mesh>
       ))}
       <mesh position={[0, 0.2, 0]}>
         <boxGeometry args={[0.9, 0.025, 0.46]} />
-        <meshStandardMaterial {...legs} />
+        <meshPhysicalMaterial {...legs} />
       </mesh>
       {/* tray, papers, a green gadget, a bottle */}
       <group position={[0.18, 0.77, -0.02]}>
@@ -1015,18 +1033,18 @@ function Workbench() {
       <group position={[-0.72, 0, 0.02]} rotation-y={Math.PI / 2}>
         <mesh position={[0, 0.46, 0]} castShadow>
           <boxGeometry args={[0.42, 0.04, 0.4]} />
-          <meshStandardMaterial {...legs} />
+          <meshPhysicalMaterial {...legs} />
         </mesh>
         {[-0.18, 0.18].flatMap((x) => [-0.17, 0.17].map((z) => [x, z])).map(([x, z]) => (
           <mesh key={`${x}${z}`} position={[x, 0.23, z]} castShadow>
             <boxGeometry args={[0.035, 0.46, 0.035]} />
-            <meshStandardMaterial {...legs} />
+            <meshPhysicalMaterial {...legs} />
           </mesh>
         ))}
         {[-0.18, 0.18].map((x) => (
           <mesh key={x} position={[x, 0.72, -0.18]} castShadow>
             <boxGeometry args={[0.035, 0.52, 0.035]} />
-            <meshStandardMaterial {...legs} />
+            <meshPhysicalMaterial {...legs} />
           </mesh>
         ))}
         {[0.6, 0.73, 0.86].map((y) => (

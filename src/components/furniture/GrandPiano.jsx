@@ -3,7 +3,8 @@ import { useFrame } from '@react-three/fiber'
 import { MathUtils } from 'three'
 import { useStore } from '../../store'
 import { playPiano } from '../../lib/pianoAudio'
-import { C } from './materials'
+import { C, K } from './materials'
+import RBox from './RBox'
 
 // Grand piano (self-playing). When the camera zooms in, it plays a loop,
 // the keys move and little notes float up.
@@ -16,7 +17,7 @@ export default function GrandPiano() {
   const pressed = useRef(new Float32Array(WHITE_KEYS))
   const notes = useRef([])
   const playing = useStore((s) => s.arrivedZone === 'piano')
-  const glossy = { color: C.black, roughness: 0.12, metalness: 0.4 }
+  const glossy = K.lacquer('#0d0d11')
 
   useEffect(() => {
     if (!playing) return
@@ -49,28 +50,28 @@ export default function GrandPiano() {
       {/* Body: straight front + rounded tail */}
       <mesh position={[0, 0.88, 0.35]} castShadow receiveShadow>
         <boxGeometry args={[1.4, 0.3, 0.9]} />
-        <meshStandardMaterial {...glossy} />
+        <meshPhysicalMaterial {...glossy} />
       </mesh>
       <mesh position={[0, 0.88, -0.2]} castShadow>
         <cylinderGeometry args={[0.7, 0.7, 0.3, 40]} />
-        <meshStandardMaterial {...glossy} />
+        <meshPhysicalMaterial {...glossy} />
       </mesh>
       <mesh position={[0.25, 0.88, -0.45]} castShadow>
         <cylinderGeometry args={[0.45, 0.45, 0.3, 32]} />
-        <meshStandardMaterial {...glossy} />
+        <meshPhysicalMaterial {...glossy} />
       </mesh>
 
       {/* Lid, hinged on the left (straight) side and propped open on the right */}
       <group position={[-0.7, 1.04, 0]} rotation-z={0.5}>
         <mesh position={[0.7, 0, -0.05]} castShadow>
           <boxGeometry args={[1.4, 0.03, 1.5]} />
-          <meshStandardMaterial {...glossy} />
+          <meshPhysicalMaterial {...glossy} />
         </mesh>
       </group>
       {/* Prop stick from the rim up to the underside of the lid */}
       <mesh position={[0.35, 1.32, 0.0]}>
         <cylinderGeometry args={[0.012, 0.012, 0.58, 6]} />
-        <meshStandardMaterial color={C.gold} metalness={0.8} />
+        <meshPhysicalMaterial {...K.chrome()} />
       </mesh>
 
       {/* Legs */}
@@ -81,14 +82,14 @@ export default function GrandPiano() {
       ].map(([x, z]) => (
         <mesh key={`${x}${z}`} position={[x, 0.37, z]} castShadow>
           <cylinderGeometry args={[0.05, 0.04, 0.74, 10]} />
-          <meshStandardMaterial {...glossy} />
+          <meshPhysicalMaterial {...glossy} />
         </mesh>
       ))}
 
       {/* Keyboard */}
       <mesh position={[0, 0.78, 0.86]}>
         <boxGeometry args={[1.38, 0.1, 0.2]} />
-        <meshStandardMaterial {...glossy} />
+        <meshPhysicalMaterial {...glossy} />
       </mesh>
       {Array.from({ length: WHITE_KEYS }).map((_, i) => (
         <group key={i} ref={(g) => (keys.current[i] = g)} position={[-0.6 + i * KEY_W, 0.835, 0.8]}>
@@ -121,22 +122,17 @@ export default function GrandPiano() {
         </group>
       ))}
 
-      {/* Bench */}
+      {/* Bench: padded lacquer top on satin legs */}
       <group position={[0, 0, 1.35]}>
-        <mesh position={[0, 0.45, 0]} castShadow>
-          <boxGeometry args={[0.8, 0.08, 0.36]} />
-          <meshStandardMaterial color={C.black} roughness={0.5} />
-        </mesh>
+        <RBox args={[0.8, 0.08, 0.36]} r={0.03} m={K.lacquer('#15151a')} position={[0, 0.46, 0]} />
+        <RBox args={[0.74, 0.03, 0.3]} r={0.012} m={K.fabric('#2a2228')} position={[0, 0.51, 0]} />
         {[
-          [-0.35, -0.14],
-          [0.35, -0.14],
-          [-0.35, 0.14],
-          [0.35, 0.14],
+          [-0.34, -0.13],
+          [0.34, -0.13],
+          [-0.34, 0.13],
+          [0.34, 0.13],
         ].map(([x, z]) => (
-          <mesh key={`${x}${z}`} position={[x, 0.21, z]}>
-            <boxGeometry args={[0.04, 0.42, 0.04]} />
-            <meshStandardMaterial color={C.black} />
-          </mesh>
+          <RBox key={`${x}${z}`} args={[0.04, 0.42, 0.04]} r={0.01} m={K.satin('#7a868c')} position={[x, 0.21, z]} />
         ))}
       </group>
     </group>

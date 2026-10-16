@@ -5,7 +5,7 @@ import { useStore } from '../../store'
 import { ARCADE_GAMES } from '../../data/content'
 import { createAttractScreen } from '../../lib/screens'
 import ScreenHtml from '../ScreenHtml'
-import { makeNeonTexture } from './materials'
+import { K, makeNeonTexture } from './materials'
 
 // Playable upright arcade cabinet, shaped like the ones in the reference video: a deep hood that
 // overhangs the screen and flares out past the sides on angled braces, a stepped crown with a logo,
@@ -87,11 +87,11 @@ export default function Arcade({ zone }) {
     <group>
       {/* body + side panels */}
       <mesh geometry={geo.body} castShadow receiveShadow>
-        <meshStandardMaterial color={body} roughness={0.55} />
+        <meshPhysicalMaterial {...K.lacquer(body)} />
       </mesh>
       {[-1, 1].map((side) => (
         <mesh key={side} geometry={geo.side} position={[side * (BODY_W / 2 + SIDE_T / 2), 0, 0]} castShadow receiveShadow>
-          <meshStandardMaterial color={sideColor} roughness={0.5} />
+          <meshPhysicalMaterial {...K.lacquer(sideColor)} />
         </mesh>
       ))}
       {/* coloured stripe along the outside of each side panel */}
@@ -105,22 +105,22 @@ export default function Arcade({ zone }) {
       {/* hood: overhangs the screen and sticks out past both sides, on angled braces */}
       <mesh position={[0, 1.835, 0.06]} castShadow receiveShadow>
         <boxGeometry args={[HOOD_W, 0.34, 0.9]} />
-        <meshStandardMaterial color={body} roughness={0.55} />
+        <meshPhysicalMaterial {...K.lacquer(body)} />
       </mesh>
       {[1, -1].map((side) => (
         <mesh key={side} geometry={geo.brace} position={[0, 0, 0.04]} scale-x={side} castShadow>
-          <meshStandardMaterial color={sideColor} roughness={0.5} side={2} />
+          <meshPhysicalMaterial {...K.lacquer(sideColor)} side={2} />
         </mesh>
       ))}
 
       {/* stepped crown with the logo */}
       <mesh position={[0, 2.045, 0.02]} castShadow>
         <boxGeometry args={[0.58, 0.07, 0.4]} />
-        <meshStandardMaterial color={body} roughness={0.55} />
+        <meshPhysicalMaterial {...K.lacquer(body)} />
       </mesh>
       <mesh position={[0, 2.14, 0.02]} castShadow>
         <boxGeometry args={[0.36, 0.13, 0.3]} />
-        <meshStandardMaterial color={sideColor} roughness={0.55} />
+        <meshPhysicalMaterial {...K.lacquer(sideColor)} />
       </mesh>
       <mesh position={[0, 2.14, 0.172]}>
         <planeGeometry args={[0.3, 0.11]} />
@@ -161,7 +161,7 @@ export default function Arcade({ zone }) {
       {/* bulky control deck: front lip wider than the body, two raised player stations */}
       <mesh position={[0, 0.935, 0.6]} castShadow>
         <boxGeometry args={[HOOD_W - 0.08, 0.12, 0.06]} />
-        <meshStandardMaterial color={body} roughness={0.5} />
+        <meshPhysicalMaterial {...K.lacquer(body)} />
       </mesh>
       <group position={[0, 1.035, 0.525]} rotation-x={0.54}>
         <mesh position={[0, 0.002, 0]} rotation-x={-Math.PI / 2}>
@@ -172,12 +172,12 @@ export default function Arcade({ zone }) {
           <group key={px} position={[px, 0, 0]}>
             <mesh position={[0, 0.03, 0]} castShadow>
               <boxGeometry args={[0.28, 0.06, 0.16]} />
-              <meshStandardMaterial color={sideColor} roughness={0.5} />
+              <meshPhysicalMaterial {...K.lacquer(sideColor)} />
             </mesh>
             {/* stick */}
             <mesh position={[-0.07, 0.09, 0.01]}>
               <cylinderGeometry args={[0.009, 0.009, 0.08, 8]} />
-              <meshStandardMaterial color="#c0c0c8" metalness={0.8} />
+              <meshPhysicalMaterial {...K.chrome()} />
             </mesh>
             <mesh position={[-0.07, 0.135, 0.01]} castShadow>
               <sphereGeometry args={[0.028, 14, 10]} />
@@ -213,7 +213,7 @@ export default function Arcade({ zone }) {
       {/* coin door + kick plate */}
       <mesh position={[0, 0.48, 0.332]}>
         <planeGeometry args={[0.3, 0.38]} />
-        <meshStandardMaterial color="#2a2830" metalness={0.5} roughness={0.4} />
+        <meshPhysicalMaterial {...K.satin('#3a3842')} />
       </mesh>
       {[-0.09, 0, 0.09].map((x) => (
         <mesh key={x} position={[x, 0.36, 0.333]}>

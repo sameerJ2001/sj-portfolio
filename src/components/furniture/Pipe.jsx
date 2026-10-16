@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
 import { CurvePath, LineCurve3, QuadraticBezierCurve3, Quaternion, TubeGeometry, Vector3 } from 'three'
+import { K } from './materials'
 
-// A bent metal pipe through a list of [x, y, z] points, with rounded bends at every corner,
-// optional clamp bands along the straight runs and flanges at the ends. Used for the industrial
-// pipework: the desk deck's frame and railing, the bed railing, etc.
+// A bent pipe of polished stainless steel through a list of [x, y, z] points, with rounded bends at
+// every corner, optional clamp bands along the straight runs and flanges at the ends. Used for all the
+// industrial pipework: the desk deck's frame, the boiler and bar pipes, the bed railing, etc.
 const Z = new Vector3(0, 0, 1)
 
 function pipePath(points, bend) {
@@ -45,7 +46,7 @@ export default function Pipe({ points, radius = 0.035, bend = 0.14, color, clamp
   const key = JSON.stringify(points)
   const { geo, clamps, ends } = useMemo(() => {
     const { path, v } = pipePath(points, bend)
-    const geo = new TubeGeometry(path, Math.max(12, Math.ceil(path.getLength() * 28)), radius, 10, false)
+    const geo = new TubeGeometry(path, Math.max(12, Math.ceil(path.getLength() * 28)), radius, 18, false)
     const clamps = clampEvery ? ringsAlong(v, clampEvery, bend + 0.12) : []
     const dirAt = (a, b) => b.clone().sub(a).normalize()
     const ends = [
@@ -55,7 +56,7 @@ export default function Pipe({ points, radius = 0.035, bend = 0.14, color, clamp
     return { geo, clamps, ends }
   }, [key, radius, bend, clampEvery]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const mat = <meshStandardMaterial color={color} metalness={0.55} roughness={0.38} />
+  const mat = <meshPhysicalMaterial {...K.steel(color)} />
   return (
     <group>
       <mesh geometry={geo} castShadow={castShadow} receiveShadow>
@@ -64,8 +65,8 @@ export default function Pipe({ points, radius = 0.035, bend = 0.14, color, clamp
       {clamps.map(({ p, q }, i) => (
         <group key={i} position={p} quaternion={q}>
           <mesh rotation-x={Math.PI / 2}>
-            <cylinderGeometry args={[radius * 1.45, radius * 1.45, 0.05, 12]} />
-            <meshStandardMaterial color={color} metalness={0.4} roughness={0.5} />
+            <cylinderGeometry args={[radius * 1.45, radius * 1.45, 0.05, 24]} />
+            <meshPhysicalMaterial {...K.steel(color, 0.24)} />
           </mesh>
         </group>
       ))}
@@ -73,7 +74,7 @@ export default function Pipe({ points, radius = 0.035, bend = 0.14, color, clamp
         ends.map(({ p, q }, i) => (
           <group key={`f${i}`} position={p} quaternion={q}>
             <mesh rotation-x={Math.PI / 2}>
-              <cylinderGeometry args={[radius * 1.8, radius * 1.8, 0.035, 12]} />
+              <cylinderGeometry args={[radius * 1.8, radius * 1.8, 0.035, 24]} />
               {mat}
             </mesh>
           </group>
