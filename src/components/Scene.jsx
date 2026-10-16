@@ -44,8 +44,8 @@ function Ambience({ lightsOn }) {
   const hemi = useRef()
   useFrame(() => {
     const day = env.daylight * (1 - env.cloud * 0.5)
-    amb.current.intensity = (lightsOn ? 0.2 : 0.1) + day * 0.4 + env.flash * 1.5
-    hemi.current.intensity = (lightsOn ? 0.28 : 0.14) + day * 0.45
+    amb.current.intensity = (lightsOn ? 0.34 : 0.18) + day * 0.4 + env.flash * 1.5
+    hemi.current.intensity = (lightsOn ? 0.5 : 0.26) + day * 0.45
   })
   return (
     <>
@@ -71,7 +71,7 @@ export default function Scene() {
 
       <Ambience lightsOn={lightsOn} />
       {/* a whisper of cool night air from above, so edges don't vanish completely */}
-      <directionalLight position={[6, 12, 6]} intensity={0.16} color="#8a96d0" />
+      <directionalLight position={[6, 12, 6]} intensity={0.22} color="#7fa6c0" />
 
       {/* Floating dust in the air */}
       <Sparkles count={60} scale={[8, UP * 2, 8]} position={[0, UP, 0]} size={1.5} speed={0.15} opacity={0.4} color="#c9b8ff" />

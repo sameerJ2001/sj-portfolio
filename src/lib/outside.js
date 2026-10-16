@@ -227,3 +227,19 @@ export function makeGround() {
   g.fillRect(0, 0, 16, 64)
   return texture(c)
 }
+
+// The warm city glow on the horizon at night (sodium streetlights + neon): white, fully opaque at the
+// bottom and fading out toward the top. The Window tints it orange.
+export function makeCityGlow() {
+  const c = document.createElement('canvas')
+  c.width = 16
+  c.height = 256
+  const g = c.getContext('2d')
+  const grad = g.createLinearGradient(0, 256, 0, 0)
+  grad.addColorStop(0, 'rgba(255,255,255,1)')
+  grad.addColorStop(0.35, 'rgba(255,255,255,0.55)')
+  grad.addColorStop(1, 'rgba(255,255,255,0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 16, 256)
+  return texture(c)
+}

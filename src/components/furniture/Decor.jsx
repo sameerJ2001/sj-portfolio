@@ -30,6 +30,8 @@ export default function Decor() {
         <Bookshelf />
       </group>
 
+      <ArcadeNookLight />
+
       {/* ---- bed wing ---- */}
       <group position={[3.5, UP, -3.72]}>
         <WallAC />
@@ -280,6 +282,25 @@ function Bookshelf() {
           <meshStandardMaterial color={b.color} roughness={0.8} />
         </mesh>
       ))}
+    </group>
+  )
+}
+
+// The arcade nook's frame, like the reference: a metal post at its open end and a cyan LED strip
+// along the underside of the duct above the cabinets, washing them in cool light.
+function ArcadeNookLight() {
+  const z0 = -3.95
+  const z1 = -1.32
+  return (
+    <group>
+      <RoundedBox args={[0.12, WALL_H - 0.6 - UP, 0.12]} radius={0.02} smoothness={2} position={[-3.3, (UP + WALL_H - 0.6) / 2, z1]} castShadow>
+        <meshStandardMaterial color="#56686b" roughness={0.45} metalness={0.35} />
+      </RoundedBox>
+      <mesh position={[-3.34, WALL_H - 0.62, (z0 + z1) / 2]} rotation-x={Math.PI / 2}>
+        <cylinderGeometry args={[0.018, 0.018, z1 - z0, 10]} />
+        <meshBasicMaterial color={[0.5, 2.6, 2.8]} toneMapped={false} />
+      </mesh>
+      <pointLight position={[-3.1, WALL_H - 0.9, -2.45]} color="#3ee8ff" intensity={2.6} distance={3.4} />
     </group>
   )
 }
@@ -849,7 +870,7 @@ function Alcove() {
         <planeGeometry args={[0.5, 0.06]} />
         <meshBasicMaterial color="#ffd86b" toneMapped={false} />
       </mesh>
-      <pointLight position={[cx, 1.6, -3.0]} color="#ff9a3c" intensity={lightsOn ? 3.5 : 2} distance={4.5} />
+      <pointLight position={[cx, 1.6, -2.9]} color="#ff9a3c" intensity={lightsOn ? 4.5 : 2.5} distance={5} />
     </group>
   )
 }

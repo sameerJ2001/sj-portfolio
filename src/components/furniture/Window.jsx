@@ -11,10 +11,11 @@ import {
   PlaneGeometry,
   Shape,
   ShapeGeometry,
+  Vector3,
 } from 'three'
 import { WINDOW } from '../../data/zones'
 import { env, tickEnvironment } from '../../lib/environment'
-import { makeBolt, makeClouds, makeForest, makeGlow, makeGround, makeSkyline, makeStars } from '../../lib/outside'
+import { makeBolt, makeCityGlow, makeClouds, makeForest, makeGlow, makeGround, makeSkyline, makeStars } from '../../lib/outside'
 import { C } from './materials'
 
 // The big upstairs window: a real opening in the back wall (Room.jsx leaves the hole) with a chunky
@@ -272,6 +273,7 @@ function Outside() {
       clouds: makeClouds(),
       stars: makeStars(),
       glow: makeGlow(),
+      cityGlow: makeCityGlow(),
       bolt: makeBolt(),
     }),
     []
@@ -347,6 +349,9 @@ function Outside() {
     o.snowFar.material.opacity = o.snowNear.material.opacity = env.snowCover
     o.ground.material.color.copy(GROUND[0]).lerp(GROUND[1], day).lerp(snowCol, env.snowCover)
 
+    // orange city glow at night, reflected more strongly off low cloud
+    o.cityGlow.material.opacity = (1 - day) * (0.55 + cloud * 0.35)
+
     o.fog.material.color.copy(FOG_NIGHT).lerp(FOG_DAY, day)
     o.fog.material.opacity = env.fog * 0.6 + env.rain * 0.12 + env.snow * 0.06
 
@@ -412,6 +417,11 @@ function Outside() {
         <planeGeometry args={[0.7, 1.6]} />
         <meshBasicMaterial map={tex.bolt} color={[2, 2, 2.4]} {...basic} />
       </mesh>
+      {/* warm orange city glow on the horizon at night */}
+      <mesh ref={set('cityGlow')} position={[0, CY - 0.15, -0.745]}>
+        <planeGeometry args={[OW, OH * 0.95]} />
+        <meshBasicMaterial map={tex.cityGlow} color="#ff7426" blending={AdditiveBlending} {...basic} />
+      </mesh>
       <mesh ref={set('cloudA')} position={[0, CY + 0.6, -0.72]}>
         <planeGeometry args={[OW, 1.3]} />
         <meshBasicMaterial map={tex.clouds} {...basic} />
@@ -474,9 +484,14 @@ function Outside() {
 }
 
 // Light into the room: a soft glow that takes on the sky's colour, and a shadow-casting sun/moon
-// beam through the shutter. Lightning flashes both.
+// beam through the shutter. At night both turn warm sodium orange (the city outside), flooding the
+// bed area like the reference while the rest of the room stays teal. Lightning flashes both.
 const PINK = new Color(C.pink)
 const SNOW_LIGHT = new Color('#b8d8ff') // the cool blue-white glow snow gives off, like the video
+const SODIUM = new Color('#ff8a3a') // city light at night
+const NIGHT_BEAM = new Vector3(0.9, CY + 0.45, -3.2)
+const NIGHT_TARGET = new Vector3(-0.4, 0, 1.3)
+const tmpPos = new Vector3()
 function WindowLights() {
   const glow = useRef()
   const beam = useRef()
@@ -484,17 +499,20 @@ function WindowLights() {
 
   useFrame(() => {
     const day = env.daylight
-    glow.current.color.copy(PINK).lerp(env.skyLow, 0.35 + day * 0.65).lerp(SNOW_LIGHT, env.snowCover * 0.55).lerp(WHITE, env.flash * 0.6)
-    glow.current.intensity = 0.7 + day * 1.6 * (1 - env.cloud * 0.4) + env.flash * 30
+    const night = 1 - day
+    glow.current.color.copy(PINK).lerp(env.skyLow, 0.35 + day * 0.65).lerp(SODIUM, night * 0.75)
+    glow.current.color.lerp(SNOW_LIGHT, env.snowCover * 0.4).lerp(WHITE, env.flash * 0.6)
+    glow.current.intensity = 0.7 + day * 1.6 * (1 - env.cloud * 0.4) + night * 4.2 + env.flash * 30
 
     // Beam comes from wherever the sun (or moon) is in the sky
     const sx = env.sunElev > 0 ? env.sunX : -env.sunX
     const elev = Math.abs(env.sunElev)
     // (kept below the top of the wall so it only gets in through the window)
-    beam.current.position.set(sx * 2.4, CY + 0.3 + elev * 1.0, -3.0)
-    target.position.set(-sx * 0.7, 0, 2.2)
-    beam.current.color.copy(env.light).lerp(WHITE, env.flash)
-    beam.current.intensity = env.lightAmount * 20 + env.flash * 60
+    // (at night it comes from the city instead: low, warm, slatted across the bed)
+    beam.current.position.copy(tmpPos.set(sx * 2.4, CY + 0.3 + elev * 1.0, -3.0)).lerp(NIGHT_BEAM, night)
+    target.position.set(-sx * 0.7, 0, 2.2).lerp(NIGHT_TARGET, night)
+    beam.current.color.copy(env.light).lerp(SODIUM, night * 0.9).lerp(WHITE, env.flash)
+    beam.current.intensity = env.lightAmount * 20 + night * 26 * (1 - env.fog * 0.4) + env.flash * 60
   })
 
   return (
