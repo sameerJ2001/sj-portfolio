@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { RoundedBox } from '@react-three/drei'
+import { Instance, Instances, RoundedBox } from '@react-three/drei'
 import { Vector3 } from 'three'
 import { useStore } from '../../store'
 import { SEAT } from '../../data/zones'
@@ -36,6 +36,15 @@ function Box({ args, r = 0.012, mat, ...props }) {
     </RoundedBox>
   )
 }
+
+// Keycaps [x, z, width, colour]: four rows of dark keys with lighter modifiers, and a space bar
+const KEYS = [
+  ...[-0.06, -0.025, 0.01, 0.045].flatMap((z, row) =>
+    Array.from({ length: 14 }, (_, k) => [-0.2 + k * 0.0308 + (row % 2) * 0.008, z, 1, k === 0 || k === 13 ? '#c9c2b0' : '#5f5a50'])
+  ),
+  [0, 0.075, 6.5, '#c9c2b0'],
+  ...[-0.15, -0.11, 0.11, 0.15].map((x) => [x, 0.075, 1.2, '#5f5a50']),
+]
 
 export default function BattleStation({ zone }) {
   const gem = useRef()
@@ -155,19 +164,19 @@ export default function BattleStation({ zone }) {
         </mesh>
       </group>
 
-      {/* Chunky beige keyboard + mouse */}
-      <group position={[0.02, TOP, -0.08]} rotation-x={0.06}>
-        <Box args={[0.58, 0.04, 0.2]} r={0.01} mat={beige} position={[0, 0.02, 0]} />
-        {Array.from({ length: 4 }).map((_, row) =>
-          Array.from({ length: 13 }).map((_, k) => (
-            <mesh key={`${row}-${k}`} position={[-0.24 + k * 0.04, 0.044, -0.06 + row * 0.04]} rotation-x={-Math.PI / 2}>
-              <planeGeometry args={[0.032, 0.032]} />
-              <meshStandardMaterial color={row === 3 && k > 3 && k < 9 ? '#c9c2b0' : '#5f5a50'} roughness={0.7} />
-            </mesh>
-          ))
-        )}
+      {/* Chunky beige retro keyboard (where SJ-3PO's hands land when he types) + mouse */}
+      <group position={[0, TOP, -0.1]} rotation-x={0.05}>
+        <Box args={[0.5, 0.03, 0.18]} r={0.008} mat={beige} position={[0, 0.015, 0]} />
+        <Instances limit={70} castShadow>
+          <boxGeometry args={[0.026, 0.014, 0.026]} />
+          <meshStandardMaterial roughness={0.6} />
+          {KEYS.map(([x, z, w, c], i) => (
+            <Instance key={i} position={[x, 0.037, z]} scale-x={w} color={c} />
+          ))}
+        </Instances>
       </group>
-      <Box args={[0.07, 0.03, 0.11]} r={0.012} mat={beige} position={[-0.42, TOP + 0.015, -0.08]} />
+      <Box args={[0.065, 0.032, 0.105]} r={0.014} mat={beige} position={[-0.43, TOP + 0.016, -0.06]} />
+      <Box args={[0.002, 0.004, 0.04]} r={0.001} mat={{ color: '#6d6658' }} position={[-0.43, TOP + 0.032, -0.085]} />
 
       {/* soda can */}
       <mesh position={[0.45, TOP + 0.06, -0.2]} castShadow>

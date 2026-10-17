@@ -51,7 +51,7 @@ export const ZONES = [
     label: `Arcade: ${ARCADE_GAMES['arcade-blue'].title}`,
     blurb: 'Insert coin',
     place: [-3.52, UP, -1.95, Math.PI / 2],
-    cabinet: { body: '#2a63d6', glow: '#5ee7ff' },
+    cabinet: { body: '#184c88', glow: '#5ee7ff' },
     screen: { local: [0, 1.385, 0.388], tilt: -0.231, size: [0.56, 0.42] },
   },
   {
@@ -59,7 +59,7 @@ export const ZONES = [
     label: `Arcade: ${ARCADE_GAMES['arcade-red'].title}`,
     blurb: 'Insert coin',
     place: [-3.52, UP, -2.95, Math.PI / 2],
-    cabinet: { body: '#c9302c', glow: '#ff8a6b' },
+    cabinet: { body: '#d23b20', glow: '#ff8a6b' },
     screen: { local: [0, 1.385, 0.388], tilt: -0.231, size: [0.56, 0.42] },
   },
   {

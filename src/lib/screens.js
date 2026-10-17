@@ -1,4 +1,4 @@
-import { CanvasTexture, SRGBColorSpace } from 'three'
+import { CanvasTexture, NearestFilter, SRGBColorSpace } from 'three'
 
 // Animated canvas textures for screens while nobody is using them.
 // Each returns { texture, tick(dt) } — call tick from useFrame; it only redraws when something changed.
@@ -105,118 +105,93 @@ export function createTerminalScreen() {
   return { texture, tick }
 }
 
-// Arcade attract mode, 80s title-screen style: striped sunset, scrolling neon grid, chrome title,
-// scores and a blinking INSERT COIN. `color` tints the grid + sun to match the cabinet.
+// Arcade attract mode for the voxel cabinets: a pale, glowing, low-res pixel screen like the
+// reference (every texel reads as a chunky pixel): dithered sparkle noise, pink pixel scribbles,
+// the game's title, a rolling scan band and a blinking INSERT COIN. `color` tints the bottom.
 export function createAttractScreen(title, color) {
-  const W = 448
-  const H = 336
+  const W = 96
+  const H = 72
   const { g, texture } = canvas(W, H)
-  const HORIZON = H * 0.6
+  texture.magFilter = texture.minFilter = NearestFilter
+  texture.generateMipmaps = false
+  const PIX = ['#ffffff', '#f6b3dc', '#9fe9ff', '#d9a5ff', '#ffd9ef']
+  let seed = 7
+  const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280)
+  let scribbles = []
   let t = 0
   let acc = 0
+  let reshuffle = 0
+
+  const newScribbles = () => {
+    scribbles = Array.from({ length: 5 }, () => {
+      const pts = [[4 + rnd() * (W - 8), 4 + rnd() * (H - 8)]]
+      for (let i = 0; i < 6; i++) {
+        const [x, y] = pts[pts.length - 1]
+        const horiz = i % 2 === 0
+        pts.push(horiz ? [Math.min(W - 3, Math.max(2, x + (rnd() - 0.5) * 30)), y] : [x, Math.min(H - 3, Math.max(2, y + (rnd() - 0.5) * 22))])
+      }
+      return { pts, c: rnd() < 0.6 ? '#f08ac4' : '#c58cf0' }
+    })
+  }
+  newScribbles()
 
   const draw = () => {
-    const sky = g.createLinearGradient(0, 0, 0, HORIZON)
-    sky.addColorStop(0, '#07031a')
-    sky.addColorStop(0.7, '#2c0b45')
-    sky.addColorStop(1, '#7a1d63')
-    g.fillStyle = sky
-    g.fillRect(0, 0, W, HORIZON)
-
-    // striped sun sinking into the horizon
-    const sun = g.createLinearGradient(0, HORIZON - 120, 0, HORIZON)
-    sun.addColorStop(0, '#ffe66b')
-    sun.addColorStop(1, color)
-    g.save()
-    g.beginPath()
-    g.arc(W / 2, HORIZON, 92, Math.PI, 0)
-    g.clip()
-    g.fillStyle = sun
-    g.fillRect(0, HORIZON - 120, W, 120)
-    g.fillStyle = '#2c0b45'
-    for (let i = 0; i < 6; i++) g.fillRect(0, HORIZON - 42 + i * 8 - (t * 6) % 8, W, 2 + i * 0.6)
-    g.restore()
-
-    // mountains
-    g.fillStyle = '#140725'
-    g.beginPath()
-    g.moveTo(0, HORIZON)
-    ;[[0, 0.82], [0.12, 0.7], [0.22, 0.86], [0.34, 0.74], [0.42, 0.9], [0.6, 0.9], [0.7, 0.72], [0.82, 0.84], [0.92, 0.7], [1, 0.8]].forEach(
-      ([x, y]) => g.lineTo(x * W, HORIZON * y + HORIZON * 0.1)
-    )
-    g.lineTo(W, HORIZON)
-    g.fill()
-
-    // neon grid floor rushing toward you
-    g.fillStyle = '#0a0418'
-    g.fillRect(0, HORIZON, W, H - HORIZON)
-    g.strokeStyle = color
-    g.shadowColor = color
-    g.shadowBlur = 6
-    g.lineWidth = 1.5
-    for (let i = -10; i <= 10; i++) {
-      g.beginPath()
-      g.moveTo(W / 2 + i * 14, HORIZON)
-      g.lineTo(W / 2 + i * 70, H)
-      g.stroke()
+    const bg = g.createLinearGradient(0, 0, 0, H)
+    bg.addColorStop(0, '#f4fdff')
+    bg.addColorStop(0.55, '#d9f7ff')
+    bg.addColorStop(1, color)
+    g.fillStyle = bg
+    g.fillRect(0, 0, W, H)
+    // dithered sparkle noise
+    for (let i = 0; i < 320; i++) {
+      g.fillStyle = PIX[Math.floor(rnd() * PIX.length)]
+      g.globalAlpha = 0.35 + rnd() * 0.5
+      g.fillRect(Math.floor(rnd() * W), Math.floor(rnd() * H), 1, 1)
     }
-    for (let i = 0; i < 9; i++) {
-      const p = ((i + (t * 0.8) % 1) / 9) ** 2
-      const y = HORIZON + p * (H - HORIZON)
-      g.beginPath()
-      g.moveTo(0, y)
-      g.lineTo(W, y)
-      g.stroke()
+    g.globalAlpha = 1
+    // blocky pink scribbles (stepped lines), re-drawn every couple of seconds
+    for (const { pts, c } of scribbles) {
+      g.fillStyle = c
+      for (let i = 1; i < pts.length; i++) {
+        const [x0, y0] = pts[i - 1]
+        const [x1, y1] = pts[i]
+        g.fillRect(Math.round(Math.min(x0, x1)), Math.round(Math.min(y0, y1)), Math.round(Math.abs(x1 - x0)) + 1, Math.round(Math.abs(y1 - y0)) + 1)
+      }
     }
-    g.shadowBlur = 0
-
-    // chrome title
+    // title, with a 1px drop shadow, bobbing a pixel
+    const text = title.toUpperCase()
+    let size = 15
+    g.font = `bold ${size}px monospace`
+    while (g.measureText(text).width > W - 10 && size > 8) g.font = `bold ${--size}px monospace`
     g.textAlign = 'center'
     g.textBaseline = 'middle'
-    g.font = 'italic bold 54px monospace'
-    const chrome = g.createLinearGradient(0, 70, 0, 128)
-    chrome.addColorStop(0, '#ffffff')
-    chrome.addColorStop(0.45, '#9ad8ff')
-    chrome.addColorStop(0.5, '#3a2a7a')
-    chrome.addColorStop(1, '#ff8ad8')
-    g.lineWidth = 6
-    g.strokeStyle = '#120420'
-    g.strokeText(title.toUpperCase(), W / 2, 100)
-    g.shadowColor = color
-    g.shadowBlur = 18
-    g.fillStyle = chrome
-    g.fillText(title.toUpperCase(), W / 2, 100)
-    g.shadowBlur = 0
-
-    g.font = 'bold 14px monospace'
-    g.fillStyle = '#ff5a5a'
-    g.textAlign = 'left'
-    g.fillText('1UP   00', 14, 18)
-    g.textAlign = 'right'
-    g.fillText('HI 50000', W - 14, 18)
-    g.textAlign = 'center'
-    if (t % 1.2 < 0.75) {
-      g.font = 'bold 22px monospace'
-      g.fillStyle = '#ffd86b'
-      g.shadowColor = '#ffd86b'
-      g.shadowBlur = 8
-      g.fillText('INSERT COIN', W / 2, H - 46)
-      g.shadowBlur = 0
+    const ty = Math.round(H * 0.42 + (Math.floor(t * 2) % 2))
+    g.fillStyle = '#7a2a68'
+    g.fillText(text, W / 2 + 1, ty + 1)
+    g.fillStyle = '#ff5fae'
+    g.fillText(text, W / 2, ty)
+    if (Math.floor(t * 1.6) % 2) {
+      g.font = 'bold 7px monospace'
+      g.fillStyle = '#5b2a7a'
+      g.fillText('INSERT COIN', W / 2, Math.round(H * 0.74))
     }
-    g.font = '12px monospace'
-    g.fillStyle = '#c9b8ff'
-    g.fillText('© 2026 SJ', W / 2, H - 18)
-    glass(g, W, H)
+    // rolling scan band
+    g.fillStyle = 'rgba(255,255,255,0.45)'
+    g.fillRect(0, Math.floor((t * 18) % H), W, 2)
     texture.needsUpdate = true
   }
 
   const tick = (dt) => {
     t += dt
     acc += dt
-    if (acc > 1 / 20) {
-      acc = 0
-      draw()
+    reshuffle += dt
+    if (reshuffle > 2.2) {
+      reshuffle = 0
+      newScribbles()
     }
+    if (acc < 1 / 10) return
+    acc = 0
+    draw()
   }
 
   draw()

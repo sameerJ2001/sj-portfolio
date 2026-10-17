@@ -4,7 +4,7 @@ import { LatheGeometry, MathUtils, MeshBasicMaterial, MeshPhysicalMaterial, Quat
 import { useStore } from '../store'
 import { SEAT } from '../data/zones'
 import RBox from './furniture/RBox'
-import { badgeTexture, edgeTube, eyeTexture, limbMaps, loft, mount, panelMaps, thetaAt, wireBundle } from './droid/build'
+import { badgeTexture, edgeTube, eyeTexture, hoodBand, limbMaps, loft, mount, panelMaps, thetaAt, wireBundle } from './droid/build'
 
 // SJ-3PO: a gold protocol droid modelled on the classic film droid, sitting at the PC with his back
 // to the room and looping through little "working" animations. When someone walks in (ENTER on the
@@ -46,9 +46,10 @@ const HEAD = [
   { y: 0.07, w: 0.112, d: 0.117 },
   { y: 0.11, w: 0.104, d: 0.11 },
   { y: 0.145, w: 0.088, d: 0.095 },
-  { y: 0.175, w: 0.064, d: 0.07 },
-  { y: 0.195, w: 0.036, d: 0.04 },
-  { y: 0.205, w: 0.008, d: 0.01 },
+  { y: 0.175, w: 0.062, d: 0.068 },
+  { y: 0.195, w: 0.034, d: 0.038 },
+  { y: 0.207, w: 0.012, d: 0.014 },
+  { y: 0.212, w: 0.003, d: 0.004 },
 ]
 // Breastplate, in the torso frame (origin at the hips): broad and boxy, pecs pushed forward
 const CHEST_N = 2.8
@@ -111,8 +112,9 @@ function drawPelvis(line) {
 // Shoulder (s) and elbow (e) angles: negative x swings forward/up, +z swings the +x arm out sideways.
 function pose(action, t, T) {
   const p = {
-    sLx: -0.75, sLz: 0, eLx: -0.85,
-    sRx: -0.75, sRz: 0, eRx: -0.85, eRz: 0, wRy: 0,
+    // hands resting on the keyboard (shoulders forward, arms angled in)
+    sLx: -0.92, sLz: 0.16, eLx: -0.82,
+    sRx: -0.92, sRz: -0.16, eRx: -0.82, eRz: 0, wRy: 0,
     headX: 0.2, headY: 0, headZ: 0, lean: 0.08, mugInHand: false,
   }
   const bob = Math.sin(T * 4.2) * 0.04 // nodding along to the beeps
@@ -124,9 +126,10 @@ function pose(action, t, T) {
       break
     case 'mouse':
       p.eLx += Math.sin(T * 18) * 0.04
-      p.sRx = -0.6
-      p.eRx = -0.95 + Math.sin(T * 3) * 0.05
-      p.sRz = 0.22 + Math.sin(T * 2.3) * 0.05
+      // right hand over to the mouse at the end of the keyboard
+      p.sRx = -0.82
+      p.eRx = -0.92 + Math.sin(T * 3) * 0.04
+      p.sRz = 0.34 + Math.sin(T * 2.3) * 0.03
       p.headY = 0.1
       p.headX += bob * 0.5
       break
@@ -138,8 +141,8 @@ function pose(action, t, T) {
     case 'sip': {
       // a little oil can lifted to the mouth in the middle of the action
       const lift = Math.sin(Math.min(1, t / 3.2) * Math.PI)
-      p.sRx = MathUtils.lerp(-0.75, -0.6, lift)
-      p.eRx = MathUtils.lerp(-0.85, -2.5, lift)
+      p.sRx = MathUtils.lerp(-0.92, -0.6, lift)
+      p.eRx = MathUtils.lerp(-0.82, -2.5, lift)
       p.sRz = MathUtils.lerp(0.15, -0.1, lift)
       p.headX = MathUtils.lerp(0.15, -0.25, lift)
       p.lean = MathUtils.lerp(0.08, -0.06, lift)
@@ -148,10 +151,10 @@ function pose(action, t, T) {
     }
     case 'stretch': {
       const up = Math.sin(Math.min(1, t / 2.6) * Math.PI)
-      p.sLx = MathUtils.lerp(-0.75, -3.0, up)
-      p.sRx = MathUtils.lerp(-0.75, -3.0, up)
-      p.eLx = MathUtils.lerp(-0.85, -0.15, up)
-      p.eRx = MathUtils.lerp(-0.85, -0.15, up)
+      p.sLx = MathUtils.lerp(-0.92, -3.0, up)
+      p.sRx = MathUtils.lerp(-0.92, -3.0, up)
+      p.eLx = MathUtils.lerp(-0.82, -0.15, up)
+      p.eRx = MathUtils.lerp(-0.82, -0.15, up)
       p.sLz = -0.2 * up
       p.sRz = 0.2 * up
       p.headX = MathUtils.lerp(0.2, -0.35, up)
@@ -214,6 +217,7 @@ function useDroid() {
     return {
       geo: {
         head,
+        hood: hoodBand(HEAD),
         chest,
         pelvis,
         chestLip: edgeTube(CHEST[0], CHEST_N, 0.006),
@@ -232,7 +236,7 @@ function useDroid() {
         grey: new MeshPhysicalMaterial({ color: '#5a5d63', metalness: 0.6, roughness: 0.4, envMapIntensity: 1.6 }),
         black: new MeshPhysicalMaterial({ color: '#0d0d10', metalness: 0.3, roughness: 0.5 }),
         wires: new MeshPhysicalMaterial({ vertexColors: true, roughness: 0.45, clearcoat: 0.6 }),
-        eye: new MeshBasicMaterial({ map: eyeTexture(), color: [2.1, 1.7, 0.85], toneMapped: false }),
+        eye: new MeshBasicMaterial({ map: eyeTexture(), color: [0.98, 0.95, 0.84], toneMapped: false }),
         badge: new MeshPhysicalMaterial({ map: badgeTexture(), metalness: 0.35, roughness: 0.35, clearcoat: 0.8, envMapIntensity: 2 }),
       },
     }
@@ -315,7 +319,7 @@ export default function Character() {
 
     // Eyes flicker now and then
     const blink = T % 6.3 < 0.09 || (T + 1.7) % 11.1 < 0.07
-    m.eye.color.setRGB(blink ? 0.4 : 2.1, blink ? 0.3 : 1.7, blink ? 0.15 : 0.85)
+    m.eye.color.setRGB(blink ? 0.4 : 0.98, blink ? 0.38 : 0.95, blink ? 0.32 : 0.84)
 
     handMug.current.visible = p.mugInHand && elbowR.current.rotation.x < -1.9
     deskMug.current.visible = !handMug.current.visible
@@ -454,7 +458,7 @@ export default function Character() {
     )
   }
 
-  const eyeX = 0.043
+  const eyeX = 0.046
   const eyeY = 0.012
 
   return (
@@ -526,12 +530,12 @@ export default function Character() {
             ))}
 
             {/* ribbed neck with the two hoses down the front */}
-            {cyl([0.036, 0.036, 0.12], m.joint, { position: [0, 0.66, 0] })}
-            {[0, 1, 2, 3, 4].map((i) => ring(0.046 - i * 0.0015, 0.0085, i % 2 ? m.goldDeep : m.gold, { key: i, position: [0, 0.618 + i * 0.016, 0] }))}
+            {cyl([0.045, 0.045, 0.12], m.joint, { position: [0, 0.66, 0] })}
+            {[0, 1, 2, 3, 4, 5].map((i) => ring(0.063 - i * 0.0008, 0.0075, i % 2 ? m.goldDeep : m.gold, { key: i, position: [0, 0.616 + i * 0.012, 0] }))}
             {[-1, 1].map((s) => (
               <group key={s}>
-                {rod([s * 0.022, 0.648, 0.045], [s * 0.03, 0.58, 0.095], 0.0045, m.silver)}
-                {cyl([0.0065, 0.0065, 0.012], m.goldDeep, { position: [s * 0.03, 0.578, 0.096] })}
+                {rod([s * 0.032, 0.62, 0.058], [s * 0.036, 0.578, 0.1], 0.0045, m.silver)}
+                {cyl([0.0065, 0.0065, 0.012], m.goldDeep, { position: [s * 0.036, 0.576, 0.1] })}
               </group>
             ))}
 
@@ -541,47 +545,48 @@ export default function Character() {
             {/* Head */}
             <group ref={head} position={[0, 0.79, 0]}>
               <mesh geometry={geo.head} material={m.head} castShadow />
-              {/* round eyes: dark surround, gold rim, glowing lens, a brow above each */}
+              {/* slotted hood band over the top and down the sides, with the little fitting on top */}
+              <mesh geometry={geo.hood} material={m.gold} castShadow />
+              {cyl([0.006, 0.006, 0.014], m.goldDeep, { position: [0, 0.226, 0] })}
+              <mesh position={[0, 0.236, 0]} material={m.gold}>
+                <torusGeometry args={[0.008, 0.0025, 6, 16]} />
+              </mesh>
+              {/* big round eyes in thick goggle rims: cream lens, vertical slats, black pupil */}
               {[-1, 1].map((s) =>
-                onPlate(HEAD, HEAD_N, thetaAt(HEAD, HEAD_N, s * eyeX, eyeY), eyeY, 0.001, (
+                onPlate(HEAD, HEAD_N, thetaAt(HEAD, HEAD_N, s * eyeX, eyeY), eyeY, -0.001, (
                   <>
-                    <mesh position-z={0.0005} material={m.black}>
-                      <circleGeometry args={[0.031, 28]} />
+                    <mesh position-z={0.0025} material={m.eye}>
+                      <circleGeometry args={[0.027, 32]} />
                     </mesh>
-                    <mesh position-z={0.0015} material={m.eye}>
-                      <circleGeometry args={[0.0235, 28]} />
-                    </mesh>
-                    <mesh position-z={0.002} material={m.gold}>
-                      <torusGeometry args={[0.026, 0.0045, 8, 28]} />
-                    </mesh>
-                    <mesh position={[0, 0.004, 0.001]} material={m.gold}>
-                      <torusGeometry args={[0.035, 0.0035, 6, 20, Math.PI]} />
+                    <mesh position-z={0.004} material={m.gold} castShadow>
+                      <torusGeometry args={[0.032, 0.0105, 12, 36]} />
                     </mesh>
                   </>
                 ), s),
               )}
-              {/* triangle nose */}
-              {onPlate(HEAD, HEAD_N, 0, -0.024, -0.002, (
-                <mesh material={m.gold} rotation-x={Math.PI - 0.25} scale={[1, 1, 0.55]} castShadow>
-                  <coneGeometry args={[0.013, 0.032, 3]} />
+              {/* nose bridge between the rims, and the nose ridge running down to the muzzle */}
+              {onPlate(HEAD, HEAD_N, 0, eyeY, 0.004, <RBox args={[0.024, 0.016, 0.012]} r={0.005} material={m.gold} />)}
+              {onPlate(HEAD, HEAD_N, 0, -0.03, -0.002, (
+                <mesh material={m.gold} rotation-x={Math.PI - 0.2} scale={[1, 1, 0.5]} castShadow>
+                  <coneGeometry args={[0.017, 0.046, 3]} />
                 </mesh>
               ))}
               {/* slot mouth with a lip below */}
-              {onPlate(HEAD, HEAD_N, 0, -0.072, 0, (
+              {onPlate(HEAD, HEAD_N, 0, -0.078, 0, (
                 <>
-                  <RBox args={[0.044, 0.008, 0.01]} r={0.003} material={m.black} shadow={false} />
-                  <RBox args={[0.05, 0.008, 0.014]} r={0.003} material={m.gold} position={[0, -0.008, 0.004]} />
+                  <RBox args={[0.05, 0.009, 0.01]} r={0.003} material={m.black} shadow={false} />
+                  <RBox args={[0.056, 0.009, 0.014]} r={0.003} material={m.gold} position={[0, -0.009, 0.004]} />
                 </>
               ))}
-              {/* ear knobs low on the sides */}
+              {/* round ears at the bottom of the band */}
               {[-1, 1].map((s) =>
-                onPlate(HEAD, HEAD_N, s * 1.5, -0.065, 0.003, (
+                onPlate(HEAD, HEAD_N, s * 1.55, -0.075, 0.002, (
                   <>
-                    {cyl([0.016, 0.017, 0.01], m.gold, { rotation: [Math.PI / 2, 0, 0] })}
-                    <mesh position-z={0.0055} material={m.joint}>
-                      <torusGeometry args={[0.011, 0.0025, 6, 20]} />
+                    {cyl([0.02, 0.021, 0.016], m.gold, { rotation: [Math.PI / 2, 0, 0] })}
+                    <mesh position-z={0.0085} material={m.goldDeep}>
+                      <torusGeometry args={[0.013, 0.003, 6, 20]} />
                     </mesh>
-                    {cyl([0.005, 0.005, 0.014], m.goldDeep, { rotation: [Math.PI / 2, 0, 0] })}
+                    {cyl([0.006, 0.006, 0.02], m.goldDeep, { rotation: [Math.PI / 2, 0, 0] })}
                   </>
                 ), `ear${s}`),
               )}

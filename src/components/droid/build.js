@@ -3,9 +3,13 @@ import {
   CanvasTexture,
   CatmullRomCurve3,
   Color,
+  ExtrudeGeometry,
   Float32BufferAttribute,
+  MathUtils,
+  Path,
   Quaternion,
   SRGBColorSpace,
+  Shape,
   TubeGeometry,
   Vector3,
 } from 'three'
@@ -136,6 +140,68 @@ export function edgeTube(ring, n, radius, out = 0.002) {
     pts.push(new Vector3(x, ringY(ring, th), z + (ring.z ?? 0)))
   }
   return new TubeGeometry(new CatmullRomCurve3(pts, true), 128, radius, 8, true)
+}
+
+// The slotted "hood" band of the head: a flat strip that follows the head's front-view silhouette
+// over the top and down both sides, standing out from the shell, with a row of slots along it.
+// Below `combFrom` it widens into a comb of horizontal slots beside the cheeks.
+export function hoodBand(rings, { bottom = -0.045, out = 0.016, comb = 0.03, combFrom = 0.025, depth = 0.012 } = {}) {
+  const top = rings[rings.length - 1].y
+  const N = 48
+  const right = []
+  for (let i = 0; i < N; i++) {
+    const y = bottom + ((top - bottom) * i) / N
+    right.push([ringAt(rings, y).w, y])
+  }
+  // silhouette from the bottom of the right side, over the top, down to the bottom of the left
+  const mid = [...right, [0, top], ...right.slice().reverse().map(([x, y]) => [-x, y])]
+  const normals = mid.map((p, i) => {
+    const a = mid[Math.max(0, i - 1)]
+    const b = mid[Math.min(mid.length - 1, i + 1)]
+    const tx = b[0] - a[0]
+    const ty = b[1] - a[1]
+    const l = Math.hypot(tx, ty)
+    return [ty / l, -tx / l]
+  })
+  const width = (y) => out + (comb - out) * MathUtils.smoothstep(y, combFrom, combFrom - 0.03)
+  const off = (d) => mid.map(([x, y], i) => [x + normals[i][0] * d(y), y + normals[i][1] * d(y)])
+  const outer = off(width)
+  const inner = off(() => -0.004)
+  const shape = new Shape()
+  outer.forEach(([x, y], i) => (i ? shape.lineTo(x, y) : shape.moveTo(x, y)))
+  inner.reverse().forEach(([x, y]) => shape.lineTo(x, y))
+  shape.closePath()
+
+  const slot = (cx, cy, ux, uy, len, w) => {
+    const vx = -uy
+    const vy = ux
+    const p = new Path()
+    p.moveTo(cx - ux * len - vx * w, cy - uy * len - vy * w)
+    p.lineTo(cx + ux * len - vx * w, cy + uy * len - vy * w)
+    p.lineTo(cx + ux * len + vx * w, cy + uy * len + vy * w)
+    p.lineTo(cx - ux * len + vx * w, cy - uy * len + vy * w)
+    p.closePath()
+    shape.holes.push(p)
+  }
+  // slots along the narrow band, every ~2.2 cm of its length
+  let run = 0
+  for (let i = 1; i < mid.length - 1; i++) {
+    run += Math.hypot(mid[i][0] - mid[i - 1][0], mid[i][1] - mid[i - 1][1])
+    const [x, y] = mid[i]
+    if (y < combFrom + 0.01 || run < 0.022) continue
+    run = 0
+    const [nx, ny] = normals[i]
+    slot(x + nx * (out * 0.5 - 0.001), y + ny * (out * 0.5 - 0.001), -ny, nx, 0.0065, 0.0022)
+  }
+  // horizontal slots in the comb by each cheek
+  for (let y = combFrom - 0.035; y > bottom + 0.004; y -= 0.014) {
+    const w = ringAt(rings, y).w
+    for (const s of [-1, 1]) slot(s * (w + comb * 0.5), y, 1, 0, comb * 0.3, 0.0022)
+  }
+
+  const g = new ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.0015, bevelSize: 0.001, bevelSegments: 1, curveSegments: 2 })
+  g.translate(0, 0, -depth / 2)
+  return g
 }
 
 // The exposed midsection: dozens of red / black / grey wires bowing out around a core, merged into
@@ -299,23 +365,25 @@ export function limbMaps(seed = 11) {
   return maps(c)
 }
 
-// Glowing photoreceptor: pale yellow lens, darker iris ring, little pupil, fine vertical slats
+// Photoreceptor like the reference: cream lens behind fine vertical slats, a small black pupil
 export function eyeTexture() {
   const S = 128
   const c = canvas(S, S)
   const g = c.getContext('2d')
-  const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
-  grad.addColorStop(0, '#3a2604')
-  grad.addColorStop(0.16, '#3a2604')
-  grad.addColorStop(0.2, '#fff8d6')
-  grad.addColorStop(0.55, '#ffe28a')
-  grad.addColorStop(0.75, '#d9a23a')
-  grad.addColorStop(0.86, '#7a4f12')
-  grad.addColorStop(1, '#2a1a04')
+  const m = S / 2
+  const grad = g.createRadialGradient(m, m, 0, m, m, m)
+  grad.addColorStop(0, '#fffdf2')
+  grad.addColorStop(0.7, '#f6ecca')
+  grad.addColorStop(0.92, '#cdb57a')
+  grad.addColorStop(1, '#5a4320')
   g.fillStyle = grad
   g.fillRect(0, 0, S, S)
-  g.fillStyle = 'rgba(60,35,5,0.22)'
-  for (let x = 8; x < S; x += 9) g.fillRect(x, 0, 2, S)
+  g.fillStyle = 'rgba(40,28,8,0.9)'
+  for (let x = 6; x < S; x += 10) g.fillRect(x, 0, 3, S)
+  g.fillStyle = '#0c0904'
+  g.beginPath()
+  g.arc(m, m, S * 0.075, 0, Math.PI * 2)
+  g.fill()
   const t = new CanvasTexture(c)
   t.colorSpace = SRGBColorSpace
   return t

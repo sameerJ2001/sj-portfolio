@@ -1,156 +1,182 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Color, ExtrudeGeometry, Shape } from 'three'
+import { Color } from 'three'
 import { useStore } from '../../store'
 import { ARCADE_GAMES } from '../../data/content'
 import { createAttractScreen } from '../../lib/screens'
+import { GLYPHS, VoxelGrid } from '../../lib/voxels'
 import ScreenHtml from '../ScreenHtml'
-import { K, makeNeonTexture } from './materials'
 
-// Playable upright arcade cabinet, shaped like the ones in the reference video: a deep hood that
-// overhangs the screen and flares out past the sides on angled braces, a stepped crown with a logo,
-// a lit marquee, a big tilted screen, a bulky two-player control deck, coin door and kick plate.
-// Idle: attract mode. Walk up to it and the screen loads the game from ARCADE_GAMES (content.js).
-// Local: back to the wall (-z), screen faces +z. Colours come from the zone's `cabinet`; the
-// screen's spot (zone.screen) sits on the sloped face of PROFILE below.
+// Playable upright arcade cabinet, built out of 2 cm voxels to match the reference's MagicaVoxel
+// look: speckly dithered colour, a stepped crown over a sign with "SJ" and two light bars, a hood
+// over a big tilted glowing screen, a control deck with two LED pods, joysticks and an "88" panel,
+// controller cables looping down over an inset lower panel, and side panels with a dark outline.
+// Idle: pixel attract mode. Walk up to it and the screen loads the game from ARCADE_GAMES
+// (content.js). Local: back to the wall (-z), screen faces +z. Colours come from the zone's
+// `cabinet`; the screen's spot (zone.screen) sits on the sloped face of PROFILE.
 const GAME_W = 640
 const GAME_H = 480
-const BODY_W = 0.66
-const SIDE_T = 0.05
+const V = 0.02 // voxel size
+const HALF_W = 0.43 // outer half-width, side panels included
+const BODY = 0.385 // half-width between the side panels
 
-// Side silhouette as [z (front), y (up)] points, back-bottom first
+// Side silhouettes as [z (front), y (up)]: body, and the side panels standing proud of it
 const PROFILE = [
-  [-0.375, 0],
-  [0.33, 0],
-  [0.33, 0.78], // kick panel + coin door
-  [0.6, 0.88], // bulky control deck juts out
-  [0.6, 0.99],
-  [0.45, 1.08], // …and slopes back up to the screen
-  [0.44, 1.13],
-  [0.32, 1.64], // tilted screen face
-  [0.48, 1.67], // hood reaches out over the screen
-  [0.5, 1.94],
-  [0.38, 2.0],
-  [-0.375, 2.0],
+  [-0.375, 0], [0.34, 0], [0.34, 0.8], [0.6, 0.85], [0.6, 0.99], [0.47, 1.07], [0.44, 1.13],
+  [0.32, 1.64], [0.5, 1.66], [0.5, 1.95], [-0.375, 1.95],
 ]
-const HOOD_W = 0.94 // the hood is wider than the body
-// Side panels stand a little proud of the body all round the front
-const SIDE_PROFILE = PROFILE.map(([z, y]) => [z > -0.3 ? z + 0.025 : z, y > 1.9 ? y + 0.02 : y])
+const SIDE = [
+  [-0.375, 0], [0.36, 0], [0.36, 0.8], [0.62, 0.85], [0.62, 1.0], [0.48, 1.08], [0.45, 1.13],
+  [0.33, 1.64], [0.52, 1.66], [0.52, 1.97], [-0.375, 1.97],
+]
+const MINI_8 = ['###', '#.#', '###', '#.#', '###']
 
-function profileGeometry(points, width) {
-  const s = new Shape()
-  points.forEach(([z, y], i) => (i ? s.lineTo(z, y) : s.moveTo(z, y)))
-  const g = new ExtrudeGeometry(s, { depth: width, bevelEnabled: false })
-  // shape x → cabinet z, extrusion → cabinet x (centred)
-  g.rotateY(-Math.PI / 2)
-  g.translate(width / 2, 0, 0)
-  return g
-}
+// palette slots
+const [BODY_C, SIDE_C, DARK, EDGE, DECK, CABLE, BEZEL, SIGN, POD, STICK, INSET, BALL] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+const [WHITE, ACCENT, DIM] = [20, 21, 22]
 
-// Angled brace under each side of the hood (seen from the front, it makes the top flare out)
-function braceGeometry() {
-  const s = new Shape()
-  s.moveTo(BODY_W / 2 + SIDE_T, 1.12)
-  s.lineTo(HOOD_W / 2, 1.67)
-  s.lineTo(BODY_W / 2 + SIDE_T, 1.67)
-  return new ExtrudeGeometry(s, { depth: 0.44, bevelEnabled: false })
+function buildCabinet({ body, glow }, screen) {
+  const g = new VoxelGrid({ size: V, min: [-HALF_W, 0, -0.38], max: [HALF_W, 2.28, 0.64] })
+  const box = (x, y, z, c) => g.box(x, y, z, c)
+  const sym = (x0, x1) => [[x0, x1], [-x1, -x0]]
+
+  // shell: body between the side panels, slightly bigger side panels either side
+  g.profile(PROFILE, [-BODY, BODY], BODY_C)
+  for (const x of sym(BODY + 0.005, HALF_W)) g.profile(SIDE, x, SIDE_C)
+  // dark outline round the outer face of each side panel
+  for (const i of [0, g.n[0] - 1])
+    for (let j = 0; j < g.n[1]; j++)
+      for (let k = 0; k < g.n[2]; k++)
+        if (g.get(i, j, k) === SIDE_C && (!g.get(i, j + 1, k) || !g.get(i, j - 1, k) || !g.get(i, j, k + 1) || !g.get(i, j, k - 1)))
+          g.put(i, j, k, EDGE)
+
+  // recessed kick plate
+  g.paint([-BODY, BODY], [0, 0.08], [0.3, 0.36], 0)
+  g.paint([-BODY, BODY], [0, 0.08], [0.28, 0.3], DARK)
+  // inset lower panel with chamfered top corners and two vertical grooves
+  const inset = (i, j) => {
+    const [x, y] = g.centre(i, j, 0)
+    return y >= 0.12 && y <= 0.74 && Math.abs(x) <= 0.31 - Math.max(0, y - 0.66)
+  }
+  g.paint([-BODY, BODY], [0, 0.8], [0.32, 0.34], 0, inset)
+  g.paint([-BODY, BODY], [0, 0.8], [0.3, 0.32], INSET, inset)
+  for (const x of [-0.12, 0.12]) {
+    g.paint([x - 0.005, x + 0.005], [0.14, 0.7], [0.3, 0.32], 0)
+    g.paint([x - 0.005, x + 0.005], [0.14, 0.7], [0.28, 0.3], DARK)
+  }
+
+  // control deck: lit top surface, glowing lip, two LED pods with sticks, the "88" panel
+  g.each([-BODY, BODY], [0.84, 1.14], [0.42, 0.62], (i, j, k) => g.get(i, j, k) && !g.get(i, j + 1, k) && g.put(i, j, k, DECK))
+  box([-BODY, BODY], [0.86, 0.88], [0.58, 0.6], ACCENT)
+  for (const s of [-1, 1]) {
+    const cx = s * 0.26
+    box([cx - 0.12, cx + 0.12], [0.97, 1.11], [0.46, 0.6], POD)
+    box([cx - 0.12, cx + 0.12], [1.1, 1.12], [0.46, 0.6], DECK)
+    for (const dx of [-0.03, 0.03]) g.point(cx + dx, 1.08, 0.59, WHITE)
+    box([cx + s * 0.04 - 0.005, cx + s * 0.04 + 0.005], [1.12, 1.18], [0.51, 0.53], STICK)
+    box([cx + s * 0.04 - 0.02, cx + s * 0.04 + 0.02], [1.18, 1.22], [0.5, 0.54], BALL)
+  }
+  box([-0.12, 0.12], [0.88, 0.98], [0.58, 0.6], DARK)
+  MINI_8.forEach((row, r) =>
+    [...row].forEach((ch, c) => {
+      if (ch !== '#') return
+      for (const x0 of [-0.08, 0.02]) g.point(x0 + c * V, 0.97 - r * V, 0.59, DIM)
+    }),
+  )
+
+  // controller cables: drop from each pod, sag down in front of the lower panel, back up into it
+  const cable = (a, b, c) => {
+    for (let t = 0; t <= 1; t += 0.002) {
+      const p = [0, 1, 2].map((n) => (1 - t) * (1 - t) * a[n] + 2 * (1 - t) * t * b[n] + t * t * c[n])
+      const [i, j, k] = g.at(...p)
+      if (!g.get(i, j, k)) g.put(i, j, k, CABLE)
+    }
+  }
+  cable([-0.24, 0.85, 0.57], [-0.2, 0.2, 0.37], [-0.03, 0.8, 0.35])
+  cable([0.27, 0.85, 0.57], [0.22, 0.3, 0.37], [0.06, 0.78, 0.35])
+
+  // screen: carve everything in front of the tilted glass, dark bezel behind it
+  const [, sy, sz] = screen.local
+  const [sw, sh] = screen.size
+  const slope = Math.tan(-screen.tilt)
+  const planeZ = (y) => sz - (y - sy) * slope
+  const half = (sh / 2) * Math.cos(screen.tilt)
+  const m = 0.03
+  g.each([-sw / 2 - m, sw / 2 + m], [sy - half - m, sy + half + m], [0, 0.64], (i, j, k) => {
+    const [, y, z] = g.centre(i, j, k)
+    if (z + V / 2 > planeZ(y) - 0.004) g.put(i, j, k, 0)
+    else if (z > planeZ(y) - 0.07 && g.get(i, j, k)) g.put(i, j, k, BEZEL)
+  })
+  // light strip under the hood, washing down over the screen
+  g.each([-0.3, 0.3], [1.64, 1.68], [0.33, 0.5], (i, j, k) => g.get(i, j, k) && !g.get(i, j - 1, k) && g.put(i, j, k, ACCENT))
+
+  // sign on top of the hood: framed front, "SJ" and two light bars in white, stepped crown
+  box([-0.33, 0.33], [1.95, 2.13], [0.2, 0.48], SIGN)
+  box([-0.33, 0.33], [1.95, 2.13], [0.46, 0.48], BODY_C)
+  box([-0.31, 0.31], [1.97, 2.11], [0.46, 0.48], SIGN)
+  ;['S', 'J'].forEach((ch, n) =>
+    GLYPHS[ch].forEach((row, r) =>
+      [...row].forEach((px, c) => {
+        if (px !== '#') return
+        for (const z of [0.47, 0.49]) g.point(-0.1 + n * 0.12 + c * V, 2.09 - r * V, z, WHITE)
+      }),
+    ),
+  )
+  for (const x of [-0.28, 0.28]) box([x - 0.005, x + 0.005], [1.99, 2.09], [0.46, 0.5], WHITE)
+  box([-0.14, 0.14], [2.14, 2.19], [0.24, 0.44], SIGN)
+  for (const x of sym(0.06, 0.14)) box(x, [2.2, 2.25], [0.28, 0.42], SIGN)
+
+  const b = new Color(body)
+  const shade = (f) => '#' + b.clone().multiplyScalar(f).getHexString()
+  const lit = '#' + b.clone().lerp(new Color(glow), 0.45).multiplyScalar(1.15).getHexString()
+  return g.mesh({
+    [BODY_C]: { color: body },
+    [SIDE_C]: { color: shade(0.86) },
+    [EDGE]: { color: shade(0.5) },
+    [DARK]: { color: shade(0.32) },
+    [DECK]: { color: lit },
+    [CABLE]: { color: '#0b0b0e', jitter: 0.15 },
+    [BEZEL]: { color: '#07080c', jitter: 0.2 },
+    [SIGN]: { color: shade(0.62) },
+    [POD]: { color: shade(0.9) },
+    [STICK]: { color: '#2b2b30' },
+    [INSET]: { color: shade(0.78) },
+    [BALL]: { color: glow },
+    [WHITE]: { color: '#ffffff', glow: true, jitter: 0.04 },
+    [ACCENT]: { color: glow, glow: true, jitter: 0.06 },
+    [DIM]: { color: shade(1.6), glow: true },
+  })
 }
 
 export default function Arcade({ zone }) {
-  const { body, glow } = zone.cabinet
   const game = ARCADE_GAMES[zone.id]
+  const { glow } = zone.cabinet
   const playing = useStore((s) => s.arrivedZone === zone.id)
   const attract = useMemo(() => createAttractScreen(game.title, glow), [game.title, glow])
-  const marquee = useMemo(
-    () => makeNeonTexture(game.title.toUpperCase(), glow, { w: 512, h: 128, font: 'bold 70px monospace' }),
-    [game.title, glow]
-  )
-  const crown = useMemo(() => makeNeonTexture('SJ', '#ffffff', { w: 256, h: 128, font: 'bold 90px monospace' }), [])
-  const geo = useMemo(
-    () => ({ body: profileGeometry(PROFILE, BODY_W), side: profileGeometry(SIDE_PROFILE, SIDE_T), brace: braceGeometry() }),
-    []
-  )
-  const sideColor = useMemo(() => new Color(body).multiplyScalar(0.72), [body])
-  const marqueeLight = useRef()
+  const vox = useMemo(() => buildCabinet(zone.cabinet, zone.screen), [zone])
+  const screenLight = useRef()
   useFrame(({ clock }, dt) => {
     if (!playing) attract.tick(dt)
-    // marquee tube hums a little
-    marqueeLight.current.color.setScalar(1.6 + Math.sin(clock.elapsedTime * 13) * 0.05)
+    // the screen's glow flickers a touch, like a CRT
+    screenLight.current.intensity = 2.2 + Math.sin(clock.elapsedTime * 31) * 0.08 + Math.sin(clock.elapsedTime * 2.3) * 0.15
   })
 
-  const dark = '#14121a'
   const [sx, sy, sz] = zone.screen.local
   const [sw, sh] = zone.screen.size
-  const tilt = zone.screen.tilt
 
   return (
     <group>
-      {/* body + side panels */}
-      <mesh geometry={geo.body} castShadow receiveShadow>
-        <meshPhysicalMaterial {...K.lacquer(body)} />
+      <mesh geometry={vox.solid} castShadow receiveShadow>
+        <meshStandardMaterial vertexColors roughness={0.55} metalness={0.08} envMapIntensity={0.6} />
       </mesh>
-      {[-1, 1].map((side) => (
-        <mesh key={side} geometry={geo.side} position={[side * (BODY_W / 2 + SIDE_T / 2), 0, 0]} castShadow receiveShadow>
-          <meshPhysicalMaterial {...K.lacquer(sideColor)} />
-        </mesh>
-      ))}
-      {/* coloured stripe along the outside of each side panel */}
-      {[-1, 1].map((side) => (
-        <mesh key={side} position={[side * (BODY_W / 2 + SIDE_T + 0.001), 1.2, 0.05]} rotation-y={side * (Math.PI / 2)}>
-          <planeGeometry args={[0.5, 0.06]} />
-          <meshBasicMaterial color={glow} toneMapped={false} />
-        </mesh>
-      ))}
-
-      {/* hood: overhangs the screen and sticks out past both sides, on angled braces */}
-      <mesh position={[0, 1.835, 0.06]} castShadow receiveShadow>
-        <boxGeometry args={[HOOD_W, 0.34, 0.9]} />
-        <meshPhysicalMaterial {...K.lacquer(body)} />
-      </mesh>
-      {[1, -1].map((side) => (
-        <mesh key={side} geometry={geo.brace} position={[0, 0, 0.04]} scale-x={side} castShadow>
-          <meshPhysicalMaterial {...K.lacquer(sideColor)} side={2} />
-        </mesh>
-      ))}
-
-      {/* stepped crown with the logo */}
-      <mesh position={[0, 2.045, 0.02]} castShadow>
-        <boxGeometry args={[0.58, 0.07, 0.4]} />
-        <meshPhysicalMaterial {...K.lacquer(body)} />
-      </mesh>
-      <mesh position={[0, 2.14, 0.02]} castShadow>
-        <boxGeometry args={[0.36, 0.13, 0.3]} />
-        <meshPhysicalMaterial {...K.lacquer(sideColor)} />
-      </mesh>
-      <mesh position={[0, 2.14, 0.172]}>
-        <planeGeometry args={[0.3, 0.11]} />
-        <meshBasicMaterial map={crown} transparent color={[1.6, 1.6, 1.6]} toneMapped={false} depthWrite={false} />
+      <mesh geometry={vox.glow}>
+        <meshBasicMaterial vertexColors color={[2.4, 2.4, 2.4]} toneMapped={false} />
       </mesh>
 
-      {/* marquee on the hood's front with the game's name; light strip underneath onto the screen */}
-      <group position={[0, 1.83, 0.512]}>
-        <mesh>
-          <planeGeometry args={[HOOD_W - 0.08, 0.24]} />
-          <meshBasicMaterial ref={marqueeLight} color={glow} toneMapped={false} transparent opacity={0.35} />
-        </mesh>
-        <mesh position={[0, 0, 0.002]}>
-          <planeGeometry args={[HOOD_W - 0.12, 0.2]} />
-          <meshBasicMaterial map={marquee} transparent color={[2, 2, 2]} toneMapped={false} depthWrite={false} />
-        </mesh>
-      </group>
-      <mesh position={[0, 1.648, 0.4]} rotation-x={Math.PI / 2}>
-        <planeGeometry args={[BODY_W - 0.06, 0.05]} />
-        <meshBasicMaterial color="#fff2d0" toneMapped={false} />
-      </mesh>
-
-      {/* screen: dark bezel, glass (attract mode), live game while you play */}
-      <mesh position={[sx, sy, sz - 0.004]} rotation-x={tilt}>
-        <planeGeometry args={[BODY_W - 0.04, sh + 0.08]} />
-        <meshStandardMaterial color={dark} roughness={0.3} />
-      </mesh>
-      <mesh position={[sx, sy, sz]} rotation-x={tilt}>
+      {/* glowing glass: pixel attract mode, live game while you play */}
+      <mesh position={[sx, sy, sz]} rotation-x={zone.screen.tilt}>
         <planeGeometry args={[sw, sh]} />
-        <meshBasicMaterial map={attract.texture} color={[1.2, 1.2, 1.2]} toneMapped={false} />
+        <meshBasicMaterial map={attract.texture} color={[1.1, 1.1, 1.1]} toneMapped={false} />
       </mesh>
       {playing && (
         <ScreenHtml screen={zone.screen} width={GAME_W} height={GAME_H}>
@@ -158,87 +184,7 @@ export default function Arcade({ zone }) {
         </ScreenHtml>
       )}
 
-      {/* bulky control deck: front lip wider than the body, two raised player stations */}
-      <mesh position={[0, 0.935, 0.6]} castShadow>
-        <boxGeometry args={[HOOD_W - 0.08, 0.12, 0.06]} />
-        <meshPhysicalMaterial {...K.lacquer(body)} />
-      </mesh>
-      <group position={[0, 1.035, 0.525]} rotation-x={0.54}>
-        <mesh position={[0, 0.002, 0]} rotation-x={-Math.PI / 2}>
-          <planeGeometry args={[BODY_W - 0.02, 0.19]} />
-          <meshStandardMaterial color="#1c1a26" />
-        </mesh>
-        {[-0.17, 0.17].map((px, p) => (
-          <group key={px} position={[px, 0, 0]}>
-            <mesh position={[0, 0.03, 0]} castShadow>
-              <boxGeometry args={[0.28, 0.06, 0.16]} />
-              <meshPhysicalMaterial {...K.lacquer(sideColor)} />
-            </mesh>
-            {/* stick */}
-            <mesh position={[-0.07, 0.09, 0.01]}>
-              <cylinderGeometry args={[0.009, 0.009, 0.08, 8]} />
-              <meshPhysicalMaterial {...K.chrome()} />
-            </mesh>
-            <mesh position={[-0.07, 0.135, 0.01]} castShadow>
-              <sphereGeometry args={[0.028, 14, 10]} />
-              <meshStandardMaterial color={p ? '#2ef2ff' : '#e0303a'} roughness={0.3} />
-            </mesh>
-            {/* buttons */}
-            {[
-              [0.03, 0.02, '#ffd86b'],
-              [0.09, 0.02, '#ff3ea5'],
-              [0.06, -0.04, '#ffffff'],
-            ].map(([x, z, c]) => (
-              <mesh key={`${x}${z}`} position={[x, 0.066, z]}>
-                <cylinderGeometry args={[0.018, 0.018, 0.014, 12]} />
-                <meshBasicMaterial color={c} toneMapped={false} />
-              </mesh>
-            ))}
-          </group>
-        ))}
-        {/* glow strip along the front edge */}
-        <mesh position={[0, 0.003, 0.094]} rotation-x={-Math.PI / 2}>
-          <planeGeometry args={[BODY_W - 0.02, 0.012]} />
-          <meshBasicMaterial color={glow} toneMapped={false} />
-        </mesh>
-      </group>
-      {/* controller cables hanging under the deck */}
-      {[-0.22, 0.12].map((x) => (
-        <mesh key={x} position={[x, 0.72, 0.58]}>
-          <cylinderGeometry args={[0.008, 0.008, 0.3, 6]} />
-          <meshStandardMaterial color="#111" />
-        </mesh>
-      ))}
-
-      {/* coin door + kick plate */}
-      <mesh position={[0, 0.48, 0.332]}>
-        <planeGeometry args={[0.3, 0.38]} />
-        <meshPhysicalMaterial {...K.satin('#3a3842')} />
-      </mesh>
-      {[-0.09, 0, 0.09].map((x) => (
-        <mesh key={x} position={[x, 0.36, 0.333]}>
-          <planeGeometry args={[0.025, 0.1]} />
-          <meshStandardMaterial color="#0c0b10" />
-        </mesh>
-      ))}
-      {[-0.055, 0.055].map((x) => (
-        <group key={x}>
-          <mesh position={[x, 0.56, 0.334]}>
-            <planeGeometry args={[0.05, 0.07]} />
-            <meshBasicMaterial color="#ff6a3d" toneMapped={false} />
-          </mesh>
-          <mesh position={[x, 0.42, 0.334]}>
-            <planeGeometry args={[0.06, 0.03]} />
-            <meshStandardMaterial color="#111" />
-          </mesh>
-        </group>
-      ))}
-      <mesh position={[0, 0.06, 0.336]}>
-        <planeGeometry args={[BODY_W, 0.12]} />
-        <meshStandardMaterial color={dark} />
-      </mesh>
-
-      <pointLight position={[0, 1.4, 0.8]} color={glow} intensity={1.5} distance={2.2} />
+      <pointLight ref={screenLight} position={[0, 1.3, 0.85]} color={glow} intensity={2.2} distance={2.6} />
     </group>
   )
 }
