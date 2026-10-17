@@ -29,6 +29,7 @@ npm run build      # production build -> dist/
 | `src/components/furniture/materials.js` | Industrial palette + generated textures (speckled concrete, riveted wall panels, brick, the katakana neon sign, paintings). |
 | `src/components/furniture/Pipe.jsx` | Bent pipe with rounded corners, clamp bands and flanges: the desk deck's pipe frame and the bed railing are built from it. |
 | `src/components/Character.jsx` | SJ-3PO, the gold protocol droid at the PC. Edit `SEQUENCE` to change his loop of little animations; he swivels round and waves when someone enters (`WAVE`). |
+| `src/components/droid/build.js` | SJ-3PO's geometry and textures: lofted armour plates with engraved panel lines, the waist wiring, eye and badge textures. |
 | `src/components/Scene.jsx` | Lights, glow (bloom), hover outline, and which furniture goes in which zone. |
 | `src/components/CameraRig.jsx` | Intro swoop + fly-to-zone camera (GSAP). |
 | `src/components/Panel.jsx` | Side panel content per zone (screen zones have none). |
