@@ -9,6 +9,7 @@ import CeilingFan from './CeilingFan'
 import RBox from './RBox'
 import VoxelModel from '../VoxelModel'
 import Pipe from './Pipe'
+import { Hanging, HangingFern, Monstera, Palm, Pothos, SnakePlant } from './Plants'
 
 // Non-clickable set dressing, laid out to match the reference room.
 // Upstairs (desk wing): twin spinning cooling rotors, bookshelf over the desk. (The arcades are zones: Arcade.jsx.)
@@ -18,6 +19,7 @@ import Pipe from './Pipe'
 // Where the ceiling fan hangs: in front of the arcades and photo wall, close enough to the desk that
 // its blade shadows sweep across SJ (like the reference video)
 const FAN = { x: -2.1, z: -1.95 }
+const DECK_T = 0.4 // the upper decks' slab thickness (Room.jsx)
 
 export default function Decor() {
   return (
@@ -66,6 +68,17 @@ export default function Decor() {
 
       {/* ---- a loose crate on the open floor ---- */}
       <Crate position={[1.5, 0, 3.5]} rotation-y={0.08} />
+
+      {/* ---- plants ---- */}
+      <Palm position={[0.45, 0, 3.55]} />
+      <Monstera position={[-0.95, 0, -0.3]} rotation-y={0.6} />
+      <SnakePlant position={[2.75, UP, -3.6]} />
+      {/* a fern hanging under the back deck's edge, over the art corner */}
+      <HangingFern position={[0.35, UP - DECK_T, -1.3]} drop={0.45} />
+      {/* pothos trailing from a pot hung under the desk deck, over the kitchen */}
+      <Hanging position={[-2.05, UP - DECK_T, 3.45]} drop={0.35}>
+        <Pothos length={0.8} />
+      </Hanging>
     </group>
   )
 }
@@ -526,7 +539,7 @@ function Bar() {
 
       {/* two stacked collared pipes along the foot of the bar */}
       {[0.08, 0.21].map((y) => (
-        <Pipe key={y} color="#aebbbf" radius={0.06} bend={0.08} clampEvery={0.7} points={[[-1.17, y, 0.36], [1.32, y, 0.36]]} />
+        <Pipe key={y} metal="copper" radius={0.06} bend={0.08} clampEvery={0.7} points={[[-1.17, y, 0.36], [1.32, y, 0.36]]} />
       ))}
 
       {/* big glass jar, glasses with red drinks, ashtray, bottle */}
@@ -951,8 +964,8 @@ function Boilers() {
       </mesh>
       <pointLight position={[0, DECK_BOTTOM - 0.35, 0.75]} color="#3fe0d0" intensity={2.4} distance={3.2} />
       {/* thick collared pipes up both sides, joined by a pipe across under the deck */}
-      <Pipe color="#a9b5b9" radius={0.075} bend={0.14} clampEvery={0.55} points={[[-0.8, 0, 0.08], [-0.8, DECK_BOTTOM - 0.16, 0.08], [0.72, DECK_BOTTOM - 0.16, 0.08], [0.72, DECK_BOTTOM, 0.08]]} />
-      <Pipe color="#a9b5b9" radius={0.065} bend={0.14} clampEvery={0.55} points={[[0.68, 0.32, -0.2], [0.72, 0.32, -0.2], [0.72, 0.32, 0.22], [0.72, DECK_BOTTOM - 0.3, 0.22]]} />
+      <Pipe metal="copper" radius={0.075} bend={0.14} clampEvery={0.55} points={[[-0.8, 0, 0.08], [-0.8, DECK_BOTTOM - 0.16, 0.08], [0.72, DECK_BOTTOM - 0.16, 0.08], [0.72, DECK_BOTTOM, 0.08]]} />
+      <Pipe metal="copper" radius={0.065} bend={0.14} clampEvery={0.55} points={[[0.68, 0.32, -0.2], [0.72, 0.32, -0.2], [0.72, 0.32, 0.22], [0.72, DECK_BOTTOM - 0.3, 0.22]]} />
       {/* square-flanged stubs coming out low at the side */}
       {[0.16, 0.36].map((y) => (
         <group key={y} position={[0.66, y, 0.48]}>

@@ -48,47 +48,138 @@ export const K = {
   chrome: (color = '#c8d0d6') => ({ color, metalness: 0.95, roughness: 0.12 }),
   // soft fabric with a little sheen (bedding, cushions)
   fabric: (color) => ({ color, roughness: 0.85, sheen: 0.7, sheenRoughness: 0.5, sheenColor: '#ffffff' }),
+  // worn rose copper (the pipework and its fittings): buffed highlights, grime in the joints
+  // (a faint warm emissive through the same grime map keeps it reading as copper in the dark loft)
+  copper: (color = '#dba07a') => {
+    const map = copperTexture()
+    return {
+      color, map, metalness: 0.72, roughness: 0.3, clearcoat: 0.3, clearcoatRoughness: 0.3, envMapIntensity: 4.2,
+      emissive: '#4a2410', emissiveMap: map, emissiveIntensity: 0.7,
+    }
+  },
+}
+
+// Worn copper, shared by every pipe: warm base, dark grime patches and streaks running along the
+// pipe, lighter scuffs, pitting.
+let copper = null
+function copperTexture() {
+  if (copper) return copper
+  const S = 512
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const g = c.getContext('2d')
+  const rnd = seeded(41)
+  g.fillStyle = '#f4ece6'
+  g.fillRect(0, 0, S, S)
+  grime(g, S, rnd, 30, 'rgba(60,32,18,', 0.42)
+  grime(g, S, rnd, 14, 'rgba(255,240,225,', 0.25)
+  // streaks along the pipe (TubeGeometry runs u along its length)
+  for (let i = 0; i < 70; i++) {
+    const y = rnd() * S
+    g.fillStyle = `rgba(${rnd() < 0.7 ? '50,26,14' : '255,235,215'},${0.05 + rnd() * 0.12})`
+    g.fillRect(rnd() * S, y, 40 + rnd() * 220, 1 + rnd() * 3)
+  }
+  dust(g, S, rnd, 2600)
+  copper = new CanvasTexture(c)
+  copper.wrapS = copper.wrapT = RepeatWrapping
+  copper.colorSpace = SRGBColorSpace
+  return copper
 }
 
 // Procedural textures so there are no image files yet.
 // Replace with your own painted/pixel textures later (/public/textures).
 
-// Ground floor: dark worn concrete in big 1.2 m slabs, each a slightly different shade, with speckle,
-// grime patches and the odd crack. Full colour (use with color white). One texture = 2.4 m square.
-export function makeFloorTexture() {
-  const S = 1024
-  const c = document.createElement('canvas')
-  c.width = c.height = S
-  const g = c.getContext('2d')
-  const rnd = seeded(21)
-  const slab = S / 2
-  for (let i = 0; i < 2; i++)
-    for (let j = 0; j < 2; j++) {
-      const v = 46 + rnd() * 12
-      g.fillStyle = `rgb(${v + 2}, ${v}, ${v + 3})`
-      g.fillRect(i * slab, j * slab, slab, slab)
+// Polished, sealed concrete (like the reference lofts): cloudy teal-grey mottling at a few scales,
+// faint trowel swirls, fine aggregate, hairline cracks and a saw-cut joint. One texture = 4 m square.
+// Returns { map, rough }: `rough` makes the sheen patchy (sealed = glossy, worn patches = duller).
+export function makePolishedConcreteTextures() {
+  const S = 2048
+  const rnd = seeded(77)
+  const mk = () => {
+    const c = document.createElement('canvas')
+    c.width = c.height = S
+    return [c, c.getContext('2d')]
+  }
+  const [c, g] = mk()
+  g.fillStyle = '#8d9a9b'
+  g.fillRect(0, 0, S, S)
+  // cloudy mottling: big soft light and dark blooms, then smaller ones
+  const blooms = (n, rMin, rMax, rgba, max) => {
+    for (let i = 0; i < n; i++) {
+      const x = rnd() * S
+      const y = rnd() * S
+      const r = rMin + rnd() * (rMax - rMin)
+      for (const [ox, oy] of [[0, 0], [S, 0], [-S, 0], [0, S], [0, -S]]) {
+        const grad = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, r)
+        grad.addColorStop(0, rgba + (max * (0.4 + rnd() * 0.6)).toFixed(3) + ')')
+        grad.addColorStop(1, rgba + '0)')
+        g.fillStyle = grad
+        g.fillRect(x + ox - r, y + oy - r, r * 2, r * 2)
+      }
     }
-  grime(g, S, rnd, 26, 'rgba(10,8,12,', 0.35)
-  grime(g, S, rnd, 10, 'rgba(120,110,105,', 0.08)
-  dust(g, S, rnd, 9000)
-  // cracks
-  g.strokeStyle = 'rgba(12,10,14,0.55)'
-  g.lineWidth = 1.5
-  for (let k = 0; k < 5; k++) {
+  }
+  blooms(18, 300, 700, 'rgba(20,26,28,', 0.5)
+  blooms(14, 250, 600, 'rgba(150,165,165,', 0.22)
+  blooms(60, 60, 220, 'rgba(25,30,32,', 0.35)
+  blooms(40, 60, 200, 'rgba(170,185,182,', 0.14)
+  // trowel swirls: faint arcs
+  g.lineCap = 'round'
+  for (let i = 0; i < 160; i++) {
+    const x = rnd() * S
+    const y = rnd() * S
+    const r = 60 + rnd() * 220
+    const a = rnd() * Math.PI * 2
+    g.strokeStyle = `rgba(${rnd() < 0.5 ? '200,210,208' : '20,26,28'},${0.025 + rnd() * 0.05})`
+    g.lineWidth = 4 + rnd() * 18
+    g.beginPath()
+    g.arc(x, y, r, a, a + 0.6 + rnd() * 1.2)
+    g.stroke()
+  }
+  // fine aggregate and pores
+  for (let i = 0; i < 60000; i++) {
+    const v = rnd()
+    g.fillStyle = v < 0.55 ? `rgba(15,18,20,${0.15 + rnd() * 0.35})` : `rgba(210,215,212,${0.06 + rnd() * 0.16})`
+    g.fillRect(rnd() * S, rnd() * S, 1 + rnd() * 2, 1 + rnd() * 2)
+  }
+  // hairline cracks
+  g.strokeStyle = 'rgba(14,16,18,0.45)'
+  g.lineWidth = 1.2
+  for (let k = 0; k < 4; k++) {
     let x = rnd() * S
     let y = rnd() * S
     g.beginPath()
     g.moveTo(x, y)
-    for (let n = 0; n < 9; n++) g.lineTo((x += (rnd() - 0.5) * 60), (y += (rnd() - 0.5) * 60))
+    for (let n = 0; n < 14; n++) g.lineTo((x += (rnd() - 0.5) * 70), (y += (rnd() - 0.5) * 70))
     g.stroke()
   }
-  // slab joints
-  g.fillStyle = 'rgba(8,7,10,0.75)'
-  for (const p of [0, slab]) {
-    g.fillRect(p, 0, 4, S)
-    g.fillRect(0, p, S, 4)
+  // saw-cut joints along one edge of the tile (so they repeat every 4 m)
+  g.fillStyle = 'rgba(10,12,14,0.8)'
+  g.fillRect(0, 0, S, 5)
+  g.fillRect(0, 0, 5, S)
+
+  // gloss: mostly sealed and shiny, duller worn patches where people walk
+  const [rc, rg] = mk()
+  rg.fillStyle = 'rgb(70,70,70)'
+  rg.fillRect(0, 0, S, S)
+  const rb = (n, rMin, rMax, v, max) => {
+    for (let i = 0; i < n; i++) {
+      const x = rnd() * S
+      const y = rnd() * S
+      const r = rMin + rnd() * (rMax - rMin)
+      const grad = rg.createRadialGradient(x, y, 0, x, y, r)
+      grad.addColorStop(0, `rgba(${v},${v},${v},${(max * (0.5 + rnd() * 0.5)).toFixed(3)})`)
+      grad.addColorStop(1, `rgba(${v},${v},${v},0)`)
+      rg.fillStyle = grad
+      rg.fillRect(x - r, y - r, r * 2, r * 2)
+    }
   }
-  return repeatTexture(c, 1, 1)
+  rb(24, 200, 600, 190, 0.55)
+  rb(30, 100, 300, 25, 0.5)
+  const map = repeatTexture(c, 1, 1)
+  map.anisotropy = 8
+  const rough = new CanvasTexture(rc)
+  rough.wrapS = rough.wrapT = RepeatWrapping
+  return { map, rough }
 }
 
 // Kitchen + bar floor: small mauve-pink tiles, each its own shade, dark grout, a little dirt.

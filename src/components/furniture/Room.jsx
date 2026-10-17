@@ -3,13 +3,15 @@ import { useTexture } from '@react-three/drei'
 import { Color, MeshBasicMaterial, MeshPhysicalMaterial, RepeatWrapping, SRGBColorSpace } from 'three'
 import { useStore } from '../../store'
 import { UP, WALL_H, DESK_DECK, BACK_DECK, BRIDGE, STAIRS, WINDOW, zoneById } from '../../data/zones'
-import { C, K, makeDeckTexture, makeFloorTexture, makeKitchenTileTexture, makeWallTexture } from './materials'
+import { C, K, makeDeckTexture, makeKitchenTileTexture, makePolishedConcreteTextures, makeWallTexture } from './materials'
 import Pipe from './Pipe'
+import FloorReflection from './FloorReflection'
 import Decor from './Decor'
 
 // Where the kitchen/bar tiles end (they start at the left wall and run to the front of the room)
 const TILE_X1 = -1.0
 const TILE_Z0 = -1.6
+const FLOOR_SIZE = [8, 8]
 
 // The cutaway cube: ground floor, two walls, the two upper platforms (the desk deck hung on teal
 // pipework, and the back deck along the back wall, joined by a short bridge), the long stair up the
@@ -17,9 +19,10 @@ const TILE_Z0 = -1.6
 // All the non-clickable props (arcades, fans, bar, bathroom, boilers…) live in Decor.jsx.
 export default function Room() {
   const goHome = useStore((s) => s.goHome)
-  const floorTex = useMemo(() => {
-    const t = makeFloorTexture()
-    t.repeat.set(8 / 2.4, 8 / 2.4) // one texture covers 2.4 m
+  const floor = useMemo(() => {
+    const t = makePolishedConcreteTextures()
+    t.map.repeat.set(2, 2) // one texture covers 4 m
+    t.rough.repeat.set(2, 2)
     return t
   }, [])
   const tileTex = useMemo(() => {
@@ -31,11 +34,13 @@ export default function Room() {
 
   return (
     <group>
-      {/* Ground floor (dark worn concrete) — clicking empty floor returns to the overview */}
+      {/* Ground floor: polished, sealed dark concrete with a clear coat, and a real mirror sheen on top
+          (FloorReflection) — clicking empty floor returns to the overview */}
       <mesh rotation-x={-Math.PI / 2} receiveShadow onClick={goHome}>
         <planeGeometry args={[8, 8]} />
-        <meshStandardMaterial map={floorTex} roughness={0.85} />
+        <meshPhysicalMaterial map={floor.map} roughnessMap={floor.rough} color="#7b898b" roughness={0.75} clearcoat={0.7} clearcoatRoughness={0.22} envMapIntensity={1.2} />
       </mesh>
+      <FloorReflection size={FLOOR_SIZE} gloss={floor.rough} />
       {/* Small pink tiles under the kitchen + bar */}
       <mesh rotation-x={-Math.PI / 2} position={[(-4 + TILE_X1) / 2, 0.004, (TILE_Z0 + 4) / 2]} receiveShadow>
         <planeGeometry args={[TILE_X1 + 4, 4 - TILE_Z0]} />
@@ -203,7 +208,7 @@ const WALL_X = -3.99
 const BRIDGE_END = BRIDGE.x1 + OUT // where the back run stops, at the bridge
 
 function DeckPipework() {
-  const pipe = { color: C.pipe, radius: PIPE_R, bend: 0.08 }
+  const pipe = { metal: 'copper', radius: PIPE_R, bend: 0.08 }
   const frame = (y) => [
     [WALL_X, y, FZ],
     [FX, y, FZ],

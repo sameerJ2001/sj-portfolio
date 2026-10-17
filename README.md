@@ -27,9 +27,11 @@ npm run build      # production build -> dist/
 | `src/lib/arcadeCabinet.js` | The arcade cabinets as 2 cm voxels (0.86 × 2.25 × 1.0 m, 43 × 113 × 50 voxels), meshed by `src/lib/voxels.js`. `node voxel/export-arcade.mjs` writes them to `voxel/arcade-blue.vox` / `arcade-red.vox` to remodel in MagicaVoxel. |
 | `src/lib/brand.js` | The SJ shield logo (one SVG path), used by SJ-OS, the CRT bezel badge and the favicon. |
 | `src/lib/environment.js` | Live Sydney time + weather (Open-Meteo), sunrise/sunset, sky colours, sun/moon, rain/snow/fog/storm. |
-| `src/lib/outside.js` | Textures for the view outside: skyline, clouds, stars, lightning. |
+| `src/lib/outside.js` | The view outside: futuristic Sydney across the harbour (CBD towers with neon signs, Sydney Tower, the Opera House, the Harbour Bridge, the water and its reflections), clouds, stars, lightning. |
 | `src/components/furniture/materials.js` | Industrial palette + generated textures (speckled concrete, riveted wall panels, brick, the katakana neon sign, paintings). |
-| `src/components/furniture/Pipe.jsx` | Bent pipe with rounded corners, clamp bands and flanges: the desk deck's pipe frame and the bed railing are built from it. |
+| `src/components/furniture/Pipe.jsx` | Bent pipe with rounded corners and industrial fittings (strap clamps, bolted couplings, collars, elbows, end flanges) in worn copper or steel: the deck pipework, bar and boiler pipes, the bed railing. |
+| `src/components/furniture/Plants.jsx` | The plants: kentia palm, monstera, hanging Boston fern, trailing pothos, snake plant (procedural leaves, merged per frond). |
+| `src/components/furniture/FloorReflection.jsx` | The polished concrete floor's real mirror sheen (blurred, patchy where the sealer is worn). |
 | `src/components/Character.jsx` | SJ-3PO, the gold protocol droid at the PC. Edit `SEQUENCE` to change his loop of little animations; he swivels round and waves when someone enters (`WAVE`). |
 | `src/components/droid/build.js` | SJ-3PO's geometry and textures: lofted armour plates with engraved panel lines, the waist wiring, eye and badge textures. |
 | `src/components/Scene.jsx` | Lights, glow (bloom), hover outline, and which furniture goes in which zone. |

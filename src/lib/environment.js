@@ -38,15 +38,15 @@ const BLEND_RATE = 0.25 // how fast weather fades into the next one
 
 // Sky gradient through the day: [time, top of sky, horizon]
 const SKY = [
-  [0.0, '#05071a', '#25124a'],
-  [0.21, '#0d1238', '#3b1f5e'],
+  [0.0, '#05071a', '#16204a'],
+  [0.21, '#0d1238', '#2a2d5e'],
   [0.26, '#3a4f96', '#ff8f6b'],
   [0.33, '#4c8ad6', '#ffd2a8'],
   [0.5, '#3a83e0', '#b4dcff'],
   [0.67, '#4a82cc', '#ffe0b0'],
   [0.74, '#3b3c7c', '#ff7448'],
   [0.79, '#1b1744', '#86356b'],
-  [1.0, '#05071a', '#25124a'],
+  [1.0, '#05071a', '#16204a'],
 ].map(([t, top, low]) => [t, new Color(top), new Color(low)])
 
 const SUN_LOW = new Color('#ff9550')

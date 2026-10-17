@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import {
   AdditiveBlending,
@@ -20,13 +20,16 @@ import {
   makeBolt,
   makeCityGlow,
   makeClouds,
-  makeForest,
+  drawSydneyTower,
+  makeCityLayer,
   makeFrostTexture,
   makeGlassGlintTexture,
   makeGlow,
-  makeGround,
-  makeSkyline,
+  makeHarbour,
+  makeHaze,
   makeStars,
+  makeWater,
+  WATERLINE,
 } from '../../lib/outside'
 import { C } from './materials'
 
@@ -125,7 +128,7 @@ function Frame() {
 }
 
 const DROPS = 60
-const FROST_NIGHT = new Color('#ff6418')
+const FROST_NIGHT = new Color('#6a8cff')
 const FROST_DAY = new Color('#ffe4bf')
 const FROST_GREY = new Color('#9aa3ad')
 function Glass() {
@@ -156,9 +159,9 @@ function Glass() {
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
     const day = env.daylight
-    // frost glow follows the sky: orange city at night, warm cream by day, greyer + dimmer under cloud.
-    // By day the frost clears so you can see Sydney's actual sky and weather; fog keeps a little haze.
-    frost.current.opacity = 0.96 - day * (0.91 - env.fog * 0.3)
+    // Clear glass with just a faint haze (violet at night, cream by day, greyer under cloud) so the
+    // city and the live weather show through; fog fogs it up a little more.
+    frost.current.opacity = 0.035 + day * 0.02 + env.fog * 0.3
     const c = frost.current.color
     c.copy(FROST_NIGHT).lerp(FROST_DAY, day).lerp(FROST_GREY, env.cloud * 0.35 * day)
     c.multiplyScalar((1.85 - day * 0.25) * (1 - env.cloud * 0.2) * (1 - env.storm * 0.35) + env.flash * 2)
@@ -175,7 +178,7 @@ function Glass() {
 
   return (
     <group position={[0, CY, -0.1]}>
-      {/* frosted pane glowing like a light panel at night; clears by day to show the weather outside */}
+      {/* faint haze on the glass; the city and the weather outside show through */}
       <mesh geometry={glass}>
         <meshBasicMaterial ref={frost} map={tex.frost} transparent opacity={0.96} toneMapped={false} depthWrite={false} />
       </mesh>
@@ -362,23 +365,38 @@ const PRECIP = 240
 const dummy = new Object3D()
 const tmp = new Color()
 const WHITE = new Color('#ffffff')
-const CITY_FAR = [new Color('#1a1535'), new Color('#55627b')]
-const FOREST_FAR = [new Color('#141220'), new Color('#5a6478')]
-const FOREST_NEAR = [new Color('#060509'), new Color('#262b33')]
-const SNOW_NIGHT = new Color('#c9d6f5')
-const SNOW_DAY = new Color('#f4f7ff')
-const GROUND = [new Color('#15161d'), new Color('#3c4a3a')]
+// Futuristic Sydney, night → day: the far suburbs melt into the haze, the CBD and the harbour's
+// landmarks in the middle, neon towers framing the sides stay darkest
+const CITY = {
+  far: [new Color('#141b3a'), new Color('#8b9ab3')],
+  mid: [new Color('#0b1124'), new Color('#5f6f88')],
+  harbour: [new Color('#2b3352'), new Color('#e4e9f0')],
+  near: [new Color('#05070e'), new Color('#2c3444')],
+}
+const WATER = [new Color('#0b1730'), new Color('#3f78a8')]
+const WATER_Y = -0.3 // the waterline, relative to the window's centre
+const HAZE_NIGHT = new Color('#1a2a50')
+const HAZE_DAY = new Color('#b9c6d6')
+const CARS = 36
+const CAR_COLOURS = ['#fff4e0', '#ff3a4f', '#2ef2ff', '#ff2fa8', '#ffe2a8']
 const FOG_DAY = new Color('#c9cfd8')
 const FOG_NIGHT = new Color('#2a2838')
 
 function Outside() {
   const tex = useMemo(
     () => ({
-      far: makeSkyline({ seed: 3, minH: 0.35, maxH: 0.95, windows: 0.22, signs: 0.15 }),
-      // a few bare trees between you and the city, and bigger trunks framing the sides of the view
-      forestFar: makeForest({ seed: 7, h: 427, count: 12, minW: 4, maxW: 10 }),
-      forestNear: makeForest({ seed: 21, h: 512, count: 6, minW: 16, maxW: 36, edges: true }),
-      ground: makeGround(),
+      // Sydney across the harbour: low far skyline, the CBD with Sydney Tower, the Opera House and
+      // Harbour Bridge on the water, neon towers framing both sides of the view
+      far: makeCityLayer({ seed: 3, w: 1024, h: 512, base: WATERLINE, minW: 10, maxW: 34, minH: 0.04, maxH: 0.16, gap: [0, 3], floor: 4, windowsOn: 0.3, signs: 0, billboards: 0, crowns: 0.05 }),
+      mid: (() => {
+        const mid = makeCityLayer({ seed: 9, w: 2048, h: 1024, base: WATERLINE, minW: 50, maxW: 120, minH: 0.08, maxH: 0.42, gap: [4, 22], floor: 8, windowsOn: 0.3, signs: 0.15, billboards: 0.12, crowns: 0.35 })
+        drawSydneyTower(mid, 0.47 * 2048, WATERLINE * 1024, 1024)
+        return mid
+      })(),
+      harbour: makeHarbour(),
+      water: makeWater({ reflections: [[0.47, '#ffcc66', 18, 0.9, 0.9], [0.34, '#2ef2ff', 60, 0.6, 0.6], [0.66, '#2ef2ff', 120, 0.5, 0.45]] }),
+      near: makeCityLayer({ seed: 17, w: 1024, h: 1024, minW: 90, maxW: 140, minH: 0.75, maxH: 0.95, gap: [3, 8], floor: 12, windowsOn: 0.4, signs: 0.8, billboards: 0.7, crowns: 0.4, edges: [[0, 0.24], [0.78, 1]] }),
+      haze: makeHaze(),
       clouds: makeClouds(),
       stars: makeStars(),
       glow: makeGlow(),
@@ -403,8 +421,25 @@ function Outside() {
       })),
     []
   )
+  // flying traffic: lights drifting across in lanes between the towers
+  const cars = useMemo(
+    () =>
+      Array.from({ length: CARS }, (_, i) => ({
+        x: (Math.random() - 0.5) * OW,
+        y: CY - 0.2 + Math.floor(Math.random() * 5) * 0.16 + Math.random() * 0.03,
+        z: -0.7 + Math.random() * 0.16,
+        v: (0.08 + Math.random() * 0.35) * (i % 2 ? 1 : -1),
+        len: 0.6 + Math.random() * 1.6,
+        color: new Color(CAR_COLOURS[i % CAR_COLOURS.length]),
+      })),
+    []
+  )
   const r = useRef({})
   const set = (k) => (o) => (r.current[k] = o)
+  useEffect(() => {
+    cars.forEach((c, i) => r.current.cars.setColorAt(i, c.color))
+    r.current.cars.instanceColor.needsUpdate = true
+  }, [cars])
 
   useFrame(({ clock }, dt) => {
     const o = r.current
@@ -445,21 +480,34 @@ function Outside() {
       m.material.opacity = 0.03 + cloud * (0.75 - i * 0.15)
     })
 
-    // City: dark silhouettes with lit windows at night, hazy blue-grey by day
-    o.far.material.color.copy(CITY_FAR[0]).lerp(CITY_FAR[1], day).lerp(env.skyLow, 0.1 + env.fog * 0.45)
-    o.farLights.material.opacity = 0.1 + (1 - day) * 0.45 - env.fog * 0.3
+    // City: dark towers and blazing neon at night, hazy blue-grey glass by day; haze thickens with fog
+    for (const [k, haze] of [['far', 0.25], ['mid', 0.1], ['harbour', 0.05], ['near', 0]]) {
+      o[k].material.color.copy(CITY[k][0]).lerp(CITY[k][1], day).lerp(env.skyLow, haze + env.fog * 0.4)
+      o[k + 'Lights'].material.color.setScalar((0.25 + (1 - day) * 1.5) * (1 - env.fog * 0.4 * (1 - haze)) + env.flash * 0.5)
+    }
+    o.water.material.color.copy(WATER[0]).lerp(WATER[1], day).lerp(env.skyLow, 0.15 + env.fog * 0.3)
+    o.waterLights.material.color.setScalar(0.1 + (1 - day) * 1.3)
+    o.waterLights.position.y = CY + WATER_Y - 0.5 + Math.sin(t * 0.8) * 0.004 // the reflections shimmer
+    tmp.copy(HAZE_NIGHT).lerp(HAZE_DAY, day).lerp(env.skyLow, 0.3)
+    o.haze1.material.color.copy(tmp)
+    o.haze1.material.opacity = 0.4 + env.fog * 0.45
 
-    // Forest in front: trees fade into haze with distance, snow settles on them and the ground
-    o.treesFar.material.color.copy(FOREST_FAR[0]).lerp(FOREST_FAR[1], day).lerp(env.skyLow, 0.25 + env.fog * 0.45)
-    o.treesNear.material.color.copy(FOREST_NEAR[0]).lerp(FOREST_NEAR[1], day).lerp(env.skyLow, env.fog * 0.2)
-    const snowCol = tmp.copy(SNOW_NIGHT).lerp(SNOW_DAY, day).multiplyScalar(0.95 - day * 0.22 + env.flash)
-    o.snowFar.material.color.copy(snowCol).lerp(env.skyLow, 0.3)
-    o.snowNear.material.color.copy(snowCol)
-    o.snowFar.material.opacity = o.snowNear.material.opacity = env.snowCover
-    o.ground.material.color.copy(GROUND[0]).lerp(GROUND[1], day).lerp(snowCol, env.snowCover)
+    // Flying traffic
+    cars.forEach((c, i) => {
+      c.x += c.v * dt
+      if (c.x > OW / 2) c.x -= OW
+      if (c.x < -OW / 2) c.x += OW
+      dummy.position.set(c.x, c.y, c.z)
+      dummy.rotation.set(0, 0, 0)
+      dummy.scale.set(c.len, 1, 1)
+      dummy.updateMatrix()
+      o.cars.setMatrixAt(i, dummy.matrix)
+    })
+    o.cars.instanceMatrix.needsUpdate = true
+    o.cars.material.opacity = 0.3 + (1 - day) * 0.7
 
-    // orange city glow at night, reflected more strongly off low cloud
-    o.cityGlow.material.opacity = (1 - day) * (0.55 + cloud * 0.35)
+    // neon city glow at night, reflected more strongly off low cloud
+    o.cityGlow.material.opacity = (1 - day) * (0.3 + cloud * 0.35)
 
     o.fog.material.color.copy(FOG_NIGHT).lerp(FOG_DAY, day)
     o.fog.material.opacity = env.fog * 0.6 + env.rain * 0.12 + env.snow * 0.06
@@ -526,46 +574,68 @@ function Outside() {
         <planeGeometry args={[0.7, 1.6]} />
         <meshBasicMaterial map={tex.bolt} color={[2, 2, 2.4]} {...basic} />
       </mesh>
-      {/* warm orange city glow on the horizon at night */}
+      {/* cool neon glow over the city at night */}
       <mesh ref={set('cityGlow')} position={[0, CY - 0.15, -0.745]}>
         <planeGeometry args={[OW, OH * 0.95]} />
-        <meshBasicMaterial map={tex.cityGlow} color="#ff7426" blending={AdditiveBlending} {...basic} />
+        <meshBasicMaterial map={tex.cityGlow} color="#3f7dff" blending={AdditiveBlending} {...basic} />
       </mesh>
       <mesh ref={set('cloudA')} position={[0, CY + 0.6, -0.72]}>
         <planeGeometry args={[OW, 1.3]} />
         <meshBasicMaterial map={tex.clouds} {...basic} />
       </mesh>
-      <mesh ref={set('far')} position={[0, CY - 0.45, -0.62]}>
-        <planeGeometry args={[OW, 1.6]} />
+      {/* Sydney, back to front: far skyline, haze, the CBD and Sydney Tower, the Opera House and the
+          Harbour Bridge, the harbour with its reflections, flying traffic, neon towers at the sides */}
+      <mesh ref={set('far')} position={[0, CY, -0.74]}>
+        <planeGeometry args={[OW, OH]} />
         <meshBasicMaterial map={tex.far.shape} {...basic} />
       </mesh>
-      <mesh ref={set('farLights')} position={[0, CY - 0.45, -0.619]}>
-        <planeGeometry args={[OW, 1.6]} />
+      <mesh ref={set('farLights')} position={[0, CY, -0.739]}>
+        <planeGeometry args={[OW, OH]} />
         <meshBasicMaterial map={tex.far.lights} blending={AdditiveBlending} {...basic} />
       </mesh>
-      <mesh ref={set('cloudB')} position={[0.4, CY + 0.25, -0.56]}>
+      <mesh ref={set('haze1')} position={[0, CY - 0.3, -0.7]}>
+        <planeGeometry args={[OW, 2.0]} />
+        <meshBasicMaterial map={tex.haze} {...basic} />
+      </mesh>
+      <mesh ref={set('cloudB')} position={[0.4, CY + 0.25, -0.66]}>
         <planeGeometry args={[OW, 1.0]} />
         <meshBasicMaterial map={tex.clouds} {...basic} />
       </mesh>
-      <mesh ref={set('treesFar')} position={[0, CY + 0.1, -0.6]}>
-        <planeGeometry args={[OW, 2.0]} />
-        <meshBasicMaterial map={tex.forestFar.shape} {...basic} />
+      <mesh ref={set('mid')} position={[0, CY, -0.64]}>
+        <planeGeometry args={[OW, OH]} />
+        <meshBasicMaterial map={tex.mid.shape} {...basic} />
       </mesh>
-      <mesh ref={set('snowFar')} position={[0, CY + 0.1, -0.599]}>
-        <planeGeometry args={[OW, 2.0]} />
-        <meshBasicMaterial map={tex.forestFar.snow} {...basic} />
+      <mesh ref={set('midLights')} position={[0, CY, -0.639]}>
+        <planeGeometry args={[OW, OH]} />
+        <meshBasicMaterial map={tex.mid.lights} blending={AdditiveBlending} {...basic} />
       </mesh>
-      <mesh ref={set('treesNear')} position={[0.3, CY + 0.15, -0.52]}>
-        <planeGeometry args={[OW, 2.4]} />
-        <meshBasicMaterial map={tex.forestNear.shape} {...basic} />
+      <mesh ref={set('harbour')} position={[0, CY, -0.6]}>
+        <planeGeometry args={[OW, OH]} />
+        <meshBasicMaterial map={tex.harbour.shape} {...basic} />
       </mesh>
-      <mesh ref={set('snowNear')} position={[0.3, CY + 0.15, -0.519]}>
-        <planeGeometry args={[OW, 2.4]} />
-        <meshBasicMaterial map={tex.forestNear.snow} {...basic} />
+      <mesh ref={set('harbourLights')} position={[0, CY, -0.599]}>
+        <planeGeometry args={[OW, OH]} />
+        <meshBasicMaterial map={tex.harbour.lights} blending={AdditiveBlending} {...basic} />
       </mesh>
-      <mesh ref={set('ground')} position={[0, BOT + 0.02, -0.47]}>
-        <planeGeometry args={[OW, 0.5]} />
-        <meshBasicMaterial map={tex.ground} {...basic} />
+      <mesh ref={set('water')} position={[0, CY + WATER_Y - 0.5, -0.57]}>
+        <planeGeometry args={[OW, 1.0]} />
+        <meshBasicMaterial map={tex.water.shape} {...basic} />
+      </mesh>
+      <mesh ref={set('waterLights')} position={[0, CY + WATER_Y - 0.5, -0.569]}>
+        <planeGeometry args={[OW, 1.0]} />
+        <meshBasicMaterial map={tex.water.lights} blending={AdditiveBlending} {...basic} />
+      </mesh>
+      <instancedMesh ref={set('cars')} args={[undefined, undefined, CARS]} frustumCulled={false}>
+        <planeGeometry args={[0.03, 0.008]} />
+        <meshBasicMaterial blending={AdditiveBlending} {...basic} />
+      </instancedMesh>
+      <mesh ref={set('near')} position={[0, CY, -0.5]}>
+        <planeGeometry args={[OW, OH]} />
+        <meshBasicMaterial map={tex.near.shape} {...basic} />
+      </mesh>
+      <mesh ref={set('nearLights')} position={[0, CY, -0.499]}>
+        <planeGeometry args={[OW, OH]} />
+        <meshBasicMaterial map={tex.near.lights} blending={AdditiveBlending} {...basic} />
       </mesh>
       <mesh ref={set('fog')} position={[0, CY, -0.44]}>
         <planeGeometry args={[OW, OH]} />
@@ -597,7 +667,7 @@ function Outside() {
 // bed area like the reference while the rest of the room stays teal. Lightning flashes both.
 const PINK = new Color(C.pink)
 const SNOW_LIGHT = new Color('#b8d8ff') // the cool blue-white glow snow gives off, like the video
-const SODIUM = new Color('#ff8a3a') // city light at night
+const SODIUM = new Color('#8a7cff') // the city's cool neon light pouring in at night
 const NIGHT_BEAM = new Vector3(0.9, CY + 0.45, -3.2)
 const NIGHT_TARGET = new Vector3(-0.4, 0, 1.3)
 const tmpPos = new Vector3()
