@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-// Flow: loader → enter() → camera swoops in on the loft (SJ is already working at the PC)
+// Flow: loader → enter() → camera swoops in on the loft (SJ-3PO is already working at the PC and turns to wave)
 // → click an object → selectZone(id) → camera flies there → arrive(id) opens the panel
 // → goHome() to back out.
 export const useStore = create((set) => ({

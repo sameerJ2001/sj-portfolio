@@ -6,6 +6,7 @@ import { useStore } from '../../store'
 import { SEAT } from '../../data/zones'
 import { createGraphScreen, createTerminalScreen, makeStatusScreenTexture } from '../../lib/screens'
 import ScreenHtml from '../ScreenHtml'
+import { chairSwivel } from '../Character'
 import Desktop from '../os/Desktop'
 import { K } from './materials'
 
@@ -55,6 +56,7 @@ export default function BattleStation({ zone }) {
     gem.current.rotation.y = t * 1.2
     gem.current.position.y = 2.25 + Math.sin(t * 2) * 0.05
     chair.current.visible = camera.position.distanceTo(CHAIR_CENTRE) > 1.6
+    chair.current.rotation.y = chairSwivel.y // turns with the droid when he waves
     if (!atPC) term.tick(dt)
     graph.tick(dt)
   })
@@ -211,7 +213,7 @@ export default function BattleStation({ zone }) {
         </group>
       </group>
 
-      {/* Office chair (SJ sits here): dark teal-grey, tall rounded back, armrests, five-star base */}
+      {/* Office chair (SJ-3PO sits here; it swivels with him): dark teal-grey, tall rounded back, armrests, five-star base */}
       <group ref={chair} position={[0, 0, 0.55]}>
         <Box args={[0.52, 0.08, 0.48]} r={0.03} mat={{ color: '#2f383b', roughness: 0.8 }} position={[0, 0.46, 0]} />
         <Box args={[0.46, 0.66, 0.08]} r={0.035} mat={{ color: '#2f383b', roughness: 0.8 }} position={[0, 0.86, 0.26]} rotation-x={-0.08} />
