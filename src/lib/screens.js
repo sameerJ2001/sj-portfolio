@@ -326,59 +326,106 @@ function snakeDemo(W, H) {
 
 // ---------- outside: the MOON LIGHT billboard and flickering neon signs ----------
 
-// The MOON LIGHT billboard: a tall pixel screen with a posing figure and the name in white, cycling
+// The MOON LIGHT billboard: a tall pixel screen with a pin-up silhouette and the name in white, cycling
 // red figure on dark → dark figure on striped red → dimmed, each change a pixel dissolve, with
 // scanlines, a scan bar rolling down, glitch slices jumping sideways and sparkling pixels.
-const BB_W = 48
-const BB_H = 96
-function maskFrom(draw) {
+const BB_W = 64
+const BB_H = 128
+// Rasterise a drawing into an on/off pixel mask. `ss` supersamples (drawn ss× larger, a pixel is on
+// when it's mostly covered) so curves come out clean; `unit` scales the drawing's coordinates.
+function maskFrom(draw, { ss = 1, unit = 1 } = {}) {
   const c = document.createElement('canvas')
-  c.width = BB_W
-  c.height = BB_H
+  c.width = BB_W * ss
+  c.height = BB_H * ss
   const g = c.getContext('2d')
+  g.scale(ss * unit, ss * unit)
   g.fillStyle = g.strokeStyle = '#fff'
   draw(g)
-  const a = g.getImageData(0, 0, BB_W, BB_H).data
+  const a = g.getImageData(0, 0, c.width, c.height).data
   const m = new Uint8Array(BB_W * BB_H)
-  for (let i = 0; i < m.length; i++) m[i] = a[i * 4 + 3] > 110 ? 1 : 0
+  for (let y = 0; y < BB_H; y++)
+    for (let x = 0; x < BB_W; x++) {
+      let cover = 0
+      for (let j = 0; j < ss; j++) for (let i = 0; i < ss; i++) cover += a[((y * ss + j) * c.width + x * ss + i) * 4 + 3]
+      m[y * BB_W + x] = cover / (ss * ss) > 115 ? 1 : 0
+    }
   return m
 }
-// A figure posing with both hands up behind the head, weight on one leg, in heels (silhouette)
+// Pin-up silhouette, like the reference billboard (drawn on a 48 × 96 grid, scaled to fit): head in
+// profile, both arms raised behind the head, long hair falling down one side, an hourglass figure,
+// long legs with the weight on one and the other knee bent in, in high heels.
 function figureMask() {
-  return maskFrom((g) => {
-    const limb = (pts, w) => {
-      g.lineWidth = w
-      g.lineCap = g.lineJoin = 'round'
+  return maskFrom(
+    (g) => {
+      const limb = (pts, w) => {
+        g.lineWidth = w
+        g.lineCap = g.lineJoin = 'round'
+        g.beginPath()
+        pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)))
+        g.stroke()
+      }
+      // fill the board like the reference: widened a touch and centred
+      g.translate(24, 0)
+      g.scale(1.18, 1.03)
+      g.translate(-25.5, -1)
+      // arms raised: elbows out wide, hands meeting behind the head
+      limb([[19.6, 21.5], [12.2, 7]], 3.4)
+      limb([[12.2, 7], [22.5, 3.2]], 2.6)
+      limb([[30.6, 21.5], [36.8, 9.5]], 3.2)
+      limb([[36.8, 9.5], [29, 5]], 2.5)
+      // long hair falling down the right side, over the shoulder
       g.beginPath()
-      pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)))
-      g.stroke()
-    }
-    g.beginPath()
-    g.ellipse(25, 14, 4.5, 5.5, 0.15, 0, Math.PI * 2) // head
-    g.fill()
-    g.beginPath()
-    g.ellipse(28.5, 15, 4.5, 7, 0.3, 0, Math.PI * 2) // hair, swept to one side
-    g.fill()
-    limb([[31, 18], [33, 24]], 3)
-    g.fillRect(23, 18, 4, 5) // neck
-    limb([[19, 24], [12.5, 14], [21, 8.5]], 3.6) // arms up, elbows out
-    limb([[30.5, 24], [37, 13.5], [28.5, 8]], 3.6)
-    g.beginPath() // torso: shoulders, waist, hips
-    g.moveTo(17.5, 23)
-    g.lineTo(31.5, 23)
-    g.quadraticCurveTo(28, 31, 29, 38)
-    g.quadraticCurveTo(33.5, 43, 33, 49)
-    g.lineTo(16.5, 49)
-    g.quadraticCurveTo(16, 43, 20.5, 38)
-    g.quadraticCurveTo(21.5, 31, 17.5, 23)
-    g.fill()
-    limb([[19.5, 48], [20, 67], [21, 87]], 5.5) // standing leg
-    limb([[29.5, 48], [33, 66], [30.5, 86]], 5) // bent leg
-    limb([[20.5, 66], [21, 87]], 3.5)
-    limb([[32.5, 66], [30.5, 86]], 3.2)
-    limb([[21, 87], [24, 92]], 2.4) // heels
-    limb([[30.5, 86], [33.5, 91]], 2.4)
-  })
+      g.moveTo(22.6, 5.2)
+      g.bezierCurveTo(23.2, 1.8, 28.6, 1.4, 30.4, 4.4)
+      g.bezierCurveTo(32.4, 7.6, 33, 11.5, 34.6, 15.5)
+      g.bezierCurveTo(36.2, 19.5, 36.8, 24.5, 34.2, 28.6)
+      g.bezierCurveTo(33.2, 25.4, 32, 22.6, 30.4, 20.4)
+      g.bezierCurveTo(29.4, 17.6, 28.8, 14.6, 27.4, 12.4)
+      g.closePath()
+      g.fill()
+      // head in profile, facing left: skull, nose and chin
+      g.beginPath()
+      g.ellipse(25.6, 8.4, 3.7, 4.7, -0.15, 0, Math.PI * 2)
+      g.fill()
+      g.beginPath()
+      g.moveTo(22.4, 6.8)
+      g.lineTo(21.2, 9.4)
+      g.lineTo(22.2, 10)
+      g.lineTo(22, 11.4)
+      g.lineTo(23.6, 12.8)
+      g.closePath()
+      g.fill()
+      g.fillRect(23.6, 12, 3.6, 9) // neck
+      // body: shoulders, bust, a narrow waist, full hips, then both legs down to the ankles
+      g.beginPath()
+      g.moveTo(18.6, 20)
+      g.bezierCurveTo(18, 23, 17.8, 26, 19, 29)
+      g.bezierCurveTo(20, 31.2, 21.4, 34, 21.3, 37.6)
+      g.bezierCurveTo(21.2, 41.2, 17, 44, 17.2, 49.6)
+      g.bezierCurveTo(17.4, 56, 18.3, 61, 18.1, 66)
+      g.bezierCurveTo(17.9, 70, 16.9, 74, 18.7, 80)
+      g.lineTo(19.5, 84.6)
+      g.lineTo(21.3, 84.6)
+      g.bezierCurveTo(21.6, 79, 22.6, 74, 21.9, 67)
+      g.bezierCurveTo(21.7, 62, 24.2, 58, 25.4, 55.4)
+      g.bezierCurveTo(26.4, 58, 27.3, 61, 27.5, 65)
+      g.bezierCurveTo(27.7, 70, 30.4, 76, 31.3, 84.6)
+      g.lineTo(33.1, 84.6)
+      g.bezierCurveTo(33.5, 77, 32.7, 70, 31.9, 65.5)
+      g.bezierCurveTo(32.3, 60, 34.8, 55, 34.4, 49.6)
+      g.bezierCurveTo(34, 45, 28.7, 41.2, 28.7, 37.6)
+      g.bezierCurveTo(28.7, 34, 31.2, 31.6, 32.9, 28.2)
+      g.bezierCurveTo(33.5, 25.6, 32.3, 22.2, 31.3, 20)
+      g.closePath()
+      g.fill()
+      // high heels: pointed feet and thin stiletto heels
+      limb([[20.4, 84], [21.7, 88.4], [22.9, 92.2]], 1.9)
+      limb([[19.7, 85.6], [19.2, 91.6]], 1.25)
+      limb([[32.2, 84], [33.9, 88], [35.8, 91.4]], 1.9)
+      limb([[31.5, 85.6], [31.9, 91]], 1.25)
+    },
+    { ss: 4, unit: BB_W / 48 },
+  )
 }
 export function createMoonlightBillboard() {
   const { g, texture } = canvas(BB_W, BB_H)
@@ -386,8 +433,9 @@ export function createMoonlightBillboard() {
   texture.generateMipmaps = false
   const fig = figureMask()
   const words = maskFrom((g2) => {
-    pixelText(g2, 'MOON', BB_W / 2, 41, 2, '#fff', 'center')
-    pixelText(g2, 'LIGHT', BB_W / 2, 54, 2, '#fff', 'center')
+    // across the chest and waist, like the reference
+    pixelText(g2, 'MOON', BB_W / 2 + 3, 39, 2, '#fff', 'center')
+    pixelText(g2, 'LIGHT', BB_W / 2 + 1, 53, 2, '#fff', 'center')
   })
   const order = Float32Array.from({ length: BB_W * BB_H }, () => Math.random())
   const img = g.createImageData(BB_W, BB_H)
