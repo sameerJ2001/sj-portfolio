@@ -334,6 +334,36 @@ export function makeHarbour({ w = 2048, h = 1024, bridge = [0.52, 0.8], opera = 
   return { shape: texture(shapeC), lights: texture(lightC) }
 }
 
+// Neon fog rolling low over the harbour (tileable sideways, white alpha; tinted crimson at night)
+export function makeNeonFog(seed = 31) {
+  const rnd = seeded(seed)
+  const W = 1024
+  const H = 256
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const g = c.getContext('2d')
+  for (let i = 0; i < 90; i++) {
+    const x = rnd() * W
+    const y = H * (0.35 + rnd() * 0.55)
+    const r = 40 + rnd() * 120
+    for (const dx of [-W, 0, W]) {
+      const grad = g.createRadialGradient(x + dx, y, 0, x + dx, y, r)
+      grad.addColorStop(0, `rgba(255,255,255,${(0.1 + rnd() * 0.18).toFixed(3)})`)
+      grad.addColorStop(1, 'rgba(255,255,255,0)')
+      g.fillStyle = grad
+      g.fillRect(x + dx - r, y - r, r * 2, r * 2)
+    }
+  }
+  const fade = g.createLinearGradient(0, 0, 0, H)
+  fade.addColorStop(0, 'rgba(0,0,0,1)')
+  fade.addColorStop(0.3, 'rgba(0,0,0,0)')
+  g.globalCompositeOperation = 'destination-out'
+  g.fillStyle = fade
+  g.fillRect(0, 0, W, H)
+  return texture(c, true)
+}
+
 // Vertical haze between the city layers: clear high up, thicker down toward the water
 export function makeHaze() {
   const c = document.createElement('canvas')

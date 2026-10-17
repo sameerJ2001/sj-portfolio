@@ -117,7 +117,7 @@ const FONT = {
   9: '111101111001110', '-': '000000111000000', '.': '000000000000010', ':': '000010000010000', '!': '010010010000010',
   '©': '111101101101111',
 }
-function pixelText(g, text, x, y, scale, color, align = 'left') {
+export function pixelText(g, text, x, y, scale, color, align = 'left') {
   const w = text.length * 4 * scale - scale
   let cx = Math.round(align === 'center' ? x - w / 2 : align === 'right' ? x - w : x)
   g.fillStyle = color
@@ -322,6 +322,187 @@ function snakeDemo(W, H) {
       g.fillRect(OX + food[0] * CELL + 1, OY + food[1] * CELL + 1, CELL - 3, CELL - 3)
     },
   }
+}
+
+// ---------- outside: the MOON LIGHT billboard and flickering neon signs ----------
+
+// The MOON LIGHT billboard: a tall pixel screen with a posing figure and the name in white, cycling
+// red figure on dark → dark figure on striped red → dimmed, each change a pixel dissolve, with
+// scanlines, a scan bar rolling down, glitch slices jumping sideways and sparkling pixels.
+const BB_W = 48
+const BB_H = 96
+function maskFrom(draw) {
+  const c = document.createElement('canvas')
+  c.width = BB_W
+  c.height = BB_H
+  const g = c.getContext('2d')
+  g.fillStyle = g.strokeStyle = '#fff'
+  draw(g)
+  const a = g.getImageData(0, 0, BB_W, BB_H).data
+  const m = new Uint8Array(BB_W * BB_H)
+  for (let i = 0; i < m.length; i++) m[i] = a[i * 4 + 3] > 110 ? 1 : 0
+  return m
+}
+// A figure posing with both hands up behind the head, weight on one leg, in heels (silhouette)
+function figureMask() {
+  return maskFrom((g) => {
+    const limb = (pts, w) => {
+      g.lineWidth = w
+      g.lineCap = g.lineJoin = 'round'
+      g.beginPath()
+      pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)))
+      g.stroke()
+    }
+    g.beginPath()
+    g.ellipse(25, 14, 4.5, 5.5, 0.15, 0, Math.PI * 2) // head
+    g.fill()
+    g.beginPath()
+    g.ellipse(28.5, 15, 4.5, 7, 0.3, 0, Math.PI * 2) // hair, swept to one side
+    g.fill()
+    limb([[31, 18], [33, 24]], 3)
+    g.fillRect(23, 18, 4, 5) // neck
+    limb([[19, 24], [12.5, 14], [21, 8.5]], 3.6) // arms up, elbows out
+    limb([[30.5, 24], [37, 13.5], [28.5, 8]], 3.6)
+    g.beginPath() // torso: shoulders, waist, hips
+    g.moveTo(17.5, 23)
+    g.lineTo(31.5, 23)
+    g.quadraticCurveTo(28, 31, 29, 38)
+    g.quadraticCurveTo(33.5, 43, 33, 49)
+    g.lineTo(16.5, 49)
+    g.quadraticCurveTo(16, 43, 20.5, 38)
+    g.quadraticCurveTo(21.5, 31, 17.5, 23)
+    g.fill()
+    limb([[19.5, 48], [20, 67], [21, 87]], 5.5) // standing leg
+    limb([[29.5, 48], [33, 66], [30.5, 86]], 5) // bent leg
+    limb([[20.5, 66], [21, 87]], 3.5)
+    limb([[32.5, 66], [30.5, 86]], 3.2)
+    limb([[21, 87], [24, 92]], 2.4) // heels
+    limb([[30.5, 86], [33.5, 91]], 2.4)
+  })
+}
+export function createMoonlightBillboard() {
+  const { g, texture } = canvas(BB_W, BB_H)
+  texture.magFilter = texture.minFilter = NearestFilter
+  texture.generateMipmaps = false
+  const fig = figureMask()
+  const words = maskFrom((g2) => {
+    pixelText(g2, 'MOON', BB_W / 2, 41, 2, '#fff', 'center')
+    pixelText(g2, 'LIGHT', BB_W / 2, 54, 2, '#fff', 'center')
+  })
+  const order = Float32Array.from({ length: BB_W * BB_H }, () => Math.random())
+  const img = g.createImageData(BB_W, BB_H)
+  const STATES = [
+    { bg: [52, 6, 10], fig: [255, 46, 52], stripes: false, dur: 2.6 },
+    { bg: [255, 60, 64], fig: [86, 10, 16], stripes: true, dur: 2.4 },
+    { bg: [40, 5, 8], fig: [70, 9, 14], stripes: false, dur: 1.8 },
+  ]
+  const TOTAL = STATES.reduce((a, s) => a + s.dur, 0)
+  let t = 0
+  let acc = 0
+  let glitch = 0
+  let glitchRow = 0
+  let glitchShift = 0
+  let textOff = 0
+
+  const draw = () => {
+    let local = t % TOTAL
+    let k = 0
+    while (local >= STATES[k].dur) local -= STATES[k++].dur
+    const cur = STATES[k]
+    const prev = STATES[(k + STATES.length - 1) % STATES.length]
+    const tr = Math.min(1, local / 0.4) // pixel dissolve into the new state
+    const pulse = k === 2 ? 0.75 + Math.sin(t * 6) * 0.25 : 1
+    const bar = ((t * 38) % (BB_H + 24)) - 12
+    const d = img.data
+    for (let y = 0; y < BB_H; y++) {
+      const shift = glitch > 0 && y >= glitchRow && y < glitchRow + 7 ? glitchShift : 0
+      const rowLight = (y % 2 ? 0.8 : 1) * (Math.abs(y - bar) < 2.5 ? 1.45 : 1)
+      for (let x = 0; x < BB_W; x++) {
+        const sx = Math.min(BB_W - 1, Math.max(0, x - shift))
+        const i = y * BB_W + sx
+        const st = order[i] < tr ? cur : prev
+        let r
+        let gg
+        let b
+        if (words[i] && textOff <= 0) {
+          r = gg = b = 255
+        } else {
+          const c = fig[i] ? st.fig : st.bg
+          const stripe = st.stripes && !fig[i] && y % 3 === 0 ? 0.72 : 1
+          const p = st === cur && k === 2 ? pulse : 1
+          ;[r, gg, b] = [c[0] * stripe * p, c[1] * stripe * p, c[2] * stripe * p]
+        }
+        const sparkle = Math.random() < 0.003 ? 1.8 : 1
+        const o = (y * BB_W + x) * 4
+        d[o] = Math.min(255, r * rowLight * sparkle)
+        d[o + 1] = Math.min(255, gg * rowLight * sparkle)
+        d[o + 2] = Math.min(255, b * rowLight * sparkle)
+        d[o + 3] = 255
+      }
+    }
+    g.putImageData(img, 0, 0)
+    texture.needsUpdate = true
+  }
+
+  const tick = (dt) => {
+    t += dt
+    glitch -= dt
+    textOff -= dt
+    if (Math.random() < dt * 0.6) {
+      glitch = 0.08 + Math.random() * 0.1
+      glitchRow = Math.floor(Math.random() * (BB_H - 7))
+      glitchShift = (Math.random() < 0.5 ? -1 : 1) * (1 + Math.floor(Math.random() * 3))
+    }
+    if (Math.random() < dt * 0.25) textOff = 0.06
+    acc += dt
+    if (acc < 1 / 15) return
+    acc = 0
+    draw()
+  }
+  draw()
+  return { texture, tick }
+}
+
+// A small neon sign in pixel letters (vertical, letters stacked, or horizontal) that flickers now and
+// then and every few seconds swaps to its other colour. tick(dt) returns the current brightness.
+export function createFlickerSign(word, colors, { vertical = true } = {}) {
+  const W = vertical ? 14 : word.length * 8 + 8
+  const H = vertical ? word.length * 12 + 6 : 18
+  const { g, texture } = canvas(W, H)
+  texture.magFilter = texture.minFilter = NearestFilter
+  texture.generateMipmaps = false
+  let ci = 0
+  let t = 0
+  let swap = 3 + Math.random() * 4
+  let level = 1
+  const draw = () => {
+    const col = colors[ci]
+    g.clearRect(0, 0, W, H)
+    g.fillStyle = 'rgba(10,6,16,0.85)'
+    g.fillRect(0, 0, W, H)
+    g.fillStyle = col
+    g.fillRect(0, 0, W, 1)
+    g.fillRect(0, H - 1, W, 1)
+    g.fillRect(0, 0, 1, H)
+    g.fillRect(W - 1, 0, 1, H)
+    if (vertical) [...word].forEach((ch, i) => pixelText(g, ch, W / 2, 4 + i * 12, 2, col, 'center'))
+    else pixelText(g, word, W / 2, 4, 2, col, 'center')
+    texture.needsUpdate = true
+  }
+  draw()
+  const tick = (dt) => {
+    t += dt
+    swap -= dt
+    if (swap <= 0 && colors.length > 1) {
+      swap = 3 + Math.random() * 5
+      ci = (ci + 1) % colors.length
+      draw()
+    }
+    // mostly steady, with quick stutters
+    level = Math.random() < 0.025 ? 0.15 + Math.random() * 0.3 : Math.min(1, level + dt * 8)
+    return level
+  }
+  return { texture, tick }
 }
 
 // Green-phosphor "graphics" screen for the second terminal on the floor: a scrolling waveform,

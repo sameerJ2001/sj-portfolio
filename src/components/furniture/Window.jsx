@@ -27,10 +27,12 @@ import {
   makeGlow,
   makeHarbour,
   makeHaze,
+  makeNeonFog,
   makeStars,
   makeWater,
   WATERLINE,
 } from '../../lib/outside'
+import { createFlickerSign, createMoonlightBillboard } from '../../lib/screens'
 import { C } from './materials'
 
 // The big upstairs window, like the reference: a deep opening in the back wall (Room.jsx leaves the
@@ -376,6 +378,7 @@ const CITY = {
 const WATER = [new Color('#0b1730'), new Color('#3f78a8')]
 const WATER_Y = -0.3 // the waterline, relative to the window's centre
 const HAZE_NIGHT = new Color('#1a2a50')
+const NEON_FOG = [new Color('#d8dde6'), new Color('#ff2448')] // day, night
 const HAZE_DAY = new Color('#b9c6d6')
 const CARS = 36
 const CAR_COLOURS = ['#fff4e0', '#ff3a4f', '#2ef2ff', '#ff2fa8', '#ffe2a8']
@@ -434,6 +437,23 @@ function Outside() {
       })),
     []
   )
+  // the MOON LIGHT billboard on the left tower, neon signs that stutter and swap colour, neon fog
+  const neon = useMemo(() => {
+    const fog = makeNeonFog()
+    const fogB = fog.clone()
+    fogB.needsUpdate = true
+    return {
+      billboard: createMoonlightBillboard(),
+      signs: [
+        { sign: createFlickerSign('BAR', ['#ff2fa8', '#2ef2ff']), at: [-1.12, CY + 0.3, -0.494], size: [0.07, 0.21] },
+        { sign: createFlickerSign('OPEN', ['#ff3048', '#3a7bff'], { vertical: false }), at: [-1.4, CY - 0.46, -0.494], size: [0.2, 0.09] },
+        { sign: createFlickerSign('HOTEL', ['#2ef2ff', '#39ff9c']), at: [1.42, CY + 0.12, -0.494], size: [0.07, 0.33] },
+      ],
+      fog,
+      fogB,
+    }
+  }, [])
+  const signMeshes = useRef([])
   const r = useRef({})
   const set = (k) => (o) => (r.current[k] = o)
   useEffect(() => {
@@ -491,6 +511,19 @@ function Outside() {
     tmp.copy(HAZE_NIGHT).lerp(HAZE_DAY, day).lerp(env.skyLow, 0.3)
     o.haze1.material.color.copy(tmp)
     o.haze1.material.opacity = 0.4 + env.fog * 0.45
+
+    // Billboard + signs: brighter at night; the neon fog drifts, crimson after dark
+    neon.billboard.tick(dt)
+    o.billboard.material.color.setScalar(0.9 + (1 - day) * 0.9)
+    o.bbGlow.material.opacity = 0.15 + (1 - day) * 0.45
+    neon.signs.forEach(({ sign }, i) => signMeshes.current[i]?.material.color.setScalar(sign.tick(dt) * (0.8 + (1 - day) * 1.0)))
+    neon.fog.offset.x = t * 0.012
+    neon.fogB.offset.x = 0.37 - t * 0.008
+    tmp.copy(NEON_FOG[0]).lerp(NEON_FOG[1], 1 - day)
+    o.fogA.material.color.copy(tmp)
+    o.fogB.material.color.copy(tmp)
+    o.fogA.material.opacity = 0.1 + (1 - day) * 0.26 + env.fog * 0.3
+    o.fogB.material.opacity = 0.06 + (1 - day) * 0.18 + env.fog * 0.3
 
     // Flying traffic
     cars.forEach((c, i) => {
@@ -629,6 +662,15 @@ function Outside() {
         <planeGeometry args={[0.03, 0.008]} />
         <meshBasicMaterial blending={AdditiveBlending} {...basic} />
       </instancedMesh>
+      {/* neon fog rolling low over the harbour */}
+      <mesh ref={set('fogA')} position={[0, CY - 0.4, -0.545]}>
+        <planeGeometry args={[OW, 0.9]} />
+        <meshBasicMaterial map={neon.fog} {...basic} />
+      </mesh>
+      <mesh ref={set('fogB')} position={[0, CY - 0.48, -0.515]}>
+        <planeGeometry args={[OW, 0.8]} />
+        <meshBasicMaterial map={neon.fogB} {...basic} />
+      </mesh>
       <mesh ref={set('near')} position={[0, CY, -0.5]}>
         <planeGeometry args={[OW, OH]} />
         <meshBasicMaterial map={tex.near.shape} {...basic} />
@@ -637,6 +679,27 @@ function Outside() {
         <planeGeometry args={[OW, OH]} />
         <meshBasicMaterial map={tex.near.lights} blending={AdditiveBlending} {...basic} />
       </mesh>
+      {/* the MOON LIGHT billboard on the left tower (frame, red halo, pixel screen), and neon signs */}
+      <group position={[-1.4, CY + 0.08, -0.495]}>
+        <mesh ref={set('bbGlow')} position-z={-0.003}>
+          <planeGeometry args={[1.1, 1.5]} />
+          <meshBasicMaterial map={tex.glow} color="#ff2a3a" blending={AdditiveBlending} {...basic} />
+        </mesh>
+        <mesh position-z={-0.002}>
+          <planeGeometry args={[0.48, 0.92]} />
+          <meshBasicMaterial color="#0b0a10" />
+        </mesh>
+        <mesh ref={set('billboard')}>
+          <planeGeometry args={[0.44, 0.88]} />
+          <meshBasicMaterial map={neon.billboard.texture} toneMapped={false} />
+        </mesh>
+      </group>
+      {neon.signs.map(({ sign, at, size }, i) => (
+        <mesh key={i} ref={(m) => (signMeshes.current[i] = m)} position={at}>
+          <planeGeometry args={size} />
+          <meshBasicMaterial map={sign.texture} transparent toneMapped={false} />
+        </mesh>
+      ))}
       <mesh ref={set('fog')} position={[0, CY, -0.44]}>
         <planeGeometry args={[OW, OH]} />
         <meshBasicMaterial {...basic} />
