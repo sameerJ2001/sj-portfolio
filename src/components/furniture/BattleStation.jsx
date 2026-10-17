@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Instance, Instances, RoundedBox } from '@react-three/drei'
-import { Vector3 } from 'three'
+import { CanvasTexture, SRGBColorSpace, Vector3 } from 'three'
 import { useStore } from '../../store'
 import { SEAT } from '../../data/zones'
+import { drawSjLogo } from '../../lib/brand'
 import { createGraphScreen, createTerminalScreen, makeStatusScreenTexture } from '../../lib/screens'
 import ScreenHtml from '../ScreenHtml'
 import { chairSwivel } from '../Character'
@@ -29,6 +30,25 @@ const TOP = 0.77 // desk surface
 // Hide the chair when the camera flies into it on the way to the screen
 const CHAIR_CENTRE = new Vector3(SEAT.position[0], SEAT.position[1] + 0.8, SEAT.position[2])
 
+// Maker's badge printed on the CRT's chin: the SJ shield, "Jawad" and "sj inc"
+function makeBezelBadge() {
+  const c = document.createElement('canvas')
+  c.width = 512
+  c.height = 160
+  const g = c.getContext('2d')
+  const ink = '#34312c'
+  drawSjLogo(g, 10, 12, 136, ink)
+  g.fillStyle = ink
+  g.font = 'italic bold 78px "Helvetica Neue", Helvetica, Arial, sans-serif'
+  g.fillText('Jawad', 104, 84)
+  g.font = '500 46px "Helvetica Neue", Helvetica, Arial, sans-serif'
+  g.fillText('sj inc', 110, 138)
+  const t = new CanvasTexture(c)
+  t.colorSpace = SRGBColorSpace
+  t.anisotropy = 8
+  return t
+}
+
 function Box({ args, r = 0.012, mat, ...props }) {
   return (
     <RoundedBox args={args} radius={r} smoothness={2} castShadow receiveShadow {...props}>
@@ -53,6 +73,7 @@ export default function BattleStation({ zone }) {
   const term = useMemo(createTerminalScreen, [])
   const graph = useMemo(createGraphScreen, [])
   const status = useMemo(makeStatusScreenTexture, [])
+  const badge = useMemo(makeBezelBadge, [])
 
   // Boot SJ-OS the first time you sit down, then keep it running (hidden) so open windows survive
   const [booted, setBooted] = useState(false)
@@ -131,8 +152,13 @@ export default function BattleStation({ zone }) {
         </mesh>
         <Box args={[sw + 0.06, sh + 0.08, 0.26]} r={0.03} mat={beigeDark} position={[sx, sy, sz - 0.24]} />
         <Box args={[0.36, 0.28, 0.14]} r={0.03} mat={beigeDark} position={[sx, sy, sz - 0.42]} />
+        {/* maker's badge on the chin, power LED on the right */}
+        <mesh position={[sx - sw / 2 + 0.05, sy - sh / 2 - 0.05, sz + 0.0212]}>
+          <planeGeometry args={[0.17, 0.053]} />
+          <meshStandardMaterial map={badge} transparent roughness={0.6} />
+        </mesh>
         <mesh position={[sx + sw / 2 + 0.03, sy - sh / 2 - 0.05, sz + 0.021]}>
-          <planeGeometry args={[0.02, 0.012]} />
+          <circleGeometry args={[0.007, 16]} />
           <meshBasicMaterial color={[0.5, 2.6, 1.0]} toneMapped={false} />
         </mesh>
         {/* glass: the animated terminal when idle; SJ-OS sits on top of it while you're here */}

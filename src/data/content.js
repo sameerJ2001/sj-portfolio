@@ -41,6 +41,15 @@ export const ABOUT = {
   ],
 }
 
+// "My Showcase": the little homepage that opens on SJ-OS (the PC) — name, tagline and the pages
+// behind its ABOUT / EXPERIENCE / PROJECTS / CONTACT links (projects + contact come from above).
+export const SHOWCASE = { name: 'Sameer Jawad', tagline: 'Cybersecurity + AI/ML', year: 2026 }
+
+export const EXPERIENCE = [
+  { role: 'Role title — placeholder', org: 'Company', dates: '2025 – now', points: ['What you built or broke (ethically).'] },
+  { role: 'Honours research', org: 'UTS', dates: '2024 – 2025', points: ['Cybersecurity honours thesis — placeholder.'] },
+]
+
 // What each zone will hold later — shown as "coming soon" for now.
 export const COMING_SOON = {
   easel: ['Gallery of my paintings', 'Paint-splatter transitions'],

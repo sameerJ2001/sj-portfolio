@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
-import { ABOUT, PROJECTS } from '../../data/content'
+import { ABOUT, EXPERIENCE, PROJECTS, SHOWCASE } from '../../data/content'
 import Terminal from '../Terminal'
 import Icon from './Icon'
+import SjLogo from './SjLogo'
 import './os.css'
 
 // SJ-OS: the retro desktop that lives on the PC's CRT (mounted on the glass by BattleStation).
+// It boots straight into "My Showcase", a little 90s homepage with the SJ logo, name and links.
 // Double-click icons to open apps, drag windows by their title bar, Start → Shut down to step back.
 // Add an app: write a component, add it to APPS, and (optionally) to DESKTOP_ICONS.
 
@@ -21,6 +23,98 @@ function Welcome() {
         <li>Try the Terminal (type <code>help</code>)</li>
         <li>Press ESC or Start → Shut down to step back into the room</li>
       </ul>
+    </div>
+  )
+}
+
+const PAGES = {
+  about: { title: 'About', Body: () => <p>{ABOUT.intro}</p> },
+  experience: {
+    title: 'Experience',
+    Body: () =>
+      EXPERIENCE.map((e) => (
+        <div key={e.role} className="os-site__entry">
+          <p>
+            <b>{e.role}</b> · {e.org} <span className="os-muted">({e.dates})</span>
+          </p>
+          <ul>
+            {e.points.map((pt) => (
+              <li key={pt}>{pt}</li>
+            ))}
+          </ul>
+        </div>
+      )),
+  },
+  projects: {
+    title: 'Projects',
+    Body: () =>
+      PROJECTS.map((p) => (
+        <div key={p.name} className="os-site__entry">
+          <p>
+            <a href={p.link} target="_blank" rel="noreferrer">
+              <b>{p.name}</b>
+            </a>{' '}
+            <span className="os-muted">— {p.stack}</span>
+          </p>
+          <p>{p.description}</p>
+        </div>
+      )),
+  },
+  contact: {
+    title: 'Contact',
+    Body: () => (
+      <ul>
+        {ABOUT.links.map((l) => (
+          <li key={l.label}>
+            <a href={l.href} target="_blank" rel="noreferrer">
+              {l.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    ),
+  },
+}
+
+// My Showcase: big name and tagline over four links; each link opens a simple page
+function Showcase() {
+  const [page, setPage] = useState(null)
+  const nav = (
+    <nav className="os-site__nav">
+      {Object.entries(PAGES).map(([id, pg]) => (
+        <button key={id} className={`os-site__link ${id === page ? 'is-current' : ''}`} onClick={() => setPage(id)}>
+          {pg.title.toUpperCase()}
+        </button>
+      ))}
+    </nav>
+  )
+  const current = page && PAGES[page]
+  return (
+    <div className="os-site">
+      <div className="os-site__page">
+        {current ? (
+          <div className="os-site__sub">
+            <header className="os-site__bar">
+              <button className="os-site__home-link" onClick={() => setPage(null)}>
+                <SjLogo size={30} color="#111" /> {SHOWCASE.name}
+              </button>
+              {nav}
+            </header>
+            <h3>{current.title}</h3>
+            <current.Body />
+          </div>
+        ) : (
+          <div className="os-site__home">
+            <SjLogo size={70} color="#111" className="os-site__logo" />
+            <h1>{SHOWCASE.name}</h1>
+            <h2>{SHOWCASE.tagline}</h2>
+            {nav}
+          </div>
+        )}
+      </div>
+      <div className="os-site__status os-sunken">
+        © Copyright {SHOWCASE.year} {SHOWCASE.name}
+      </div>
     </div>
   )
 }
@@ -94,6 +188,7 @@ function Trash() {
 }
 
 const APPS = {
+  showcase: { title: `${SHOWCASE.name} - Showcase ${SHOWCASE.year}`, label: 'My Showcase', icon: 'sj', w: 670, h: 526, Body: Showcase, flush: true },
   welcome: { title: 'Welcome.txt', icon: 'note', w: 400, h: 200, Body: Welcome },
   projects: { title: 'My Projects', icon: 'folder', w: 500, h: 300, Body: Projects },
   terminal: { title: 'Terminal', icon: 'terminal', w: 520, h: 320, Body: Terminal, dark: true },
@@ -101,11 +196,11 @@ const APPS = {
   contact: { title: 'Contact', icon: 'mail', w: 360, h: 170, Body: Contact },
   trash: { title: 'Recycle Bin', icon: 'trash', w: 320, h: 170, Body: Trash },
 }
-const DESKTOP_ICONS = ['projects', 'terminal', 'about', 'contact', 'trash']
-const START_ITEMS = ['projects', 'terminal', 'about', 'contact']
+const DESKTOP_ICONS = ['showcase', 'projects', 'terminal', 'about', 'contact', 'trash']
+const START_ITEMS = ['showcase', 'projects', 'terminal', 'about', 'contact', 'welcome']
 
 const BOOT = [
-  'SJ-BIOS v4.20  (C) 2026 SJ Industries',
+  'SJ-BIOS v4.20  (C) 2026 SJ Inc.',
   'CPU: Gold Edition @ 4.20 GHz',
   'Memory test: 65536K OK',
   'Detecting drives ... C: SJ-HDD  OK',
@@ -125,7 +220,7 @@ export default function Desktop({ width, height }) {
   const [startOpen, setStartOpen] = useState(false)
   const now = useClock()
 
-  // Boot text, one line at a time, then the desktop with the welcome note open
+  // Boot text, one line at a time, then the desktop with My Showcase open
   useEffect(() => {
     if (boot > BOOT.length) return
     const id = setTimeout(() => setBoot((b) => b + 1), boot === BOOT.length ? 600 : 260)
@@ -133,7 +228,7 @@ export default function Desktop({ width, height }) {
   }, [boot])
   const booted = boot > BOOT.length
   useEffect(() => {
-    if (booted) open('welcome')
+    if (booted) open('showcase')
   }, [booted]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const focus = (id) => setWins((ws) => ws.map((w) => (w.id === id ? { ...w, z: ++zTop.current, min: false } : w)))
@@ -184,7 +279,7 @@ export default function Desktop({ width, height }) {
     <div ref={root} className="os" style={{ width, height }}>
       {!booted ? (
         <div className="os-boot">
-          <div className="os-boot__logo">SJ</div>
+          <SjLogo size={64} color="#e8b923" className="os-boot__logo" />
           {BOOT.slice(0, boot).map((l) => (
             <div key={l}>{l}</div>
           ))}
@@ -212,7 +307,7 @@ export default function Desktop({ width, height }) {
                   onKeyDown={(e) => e.key === 'Enter' && open(id)}
                 >
                   <Icon type={APPS[id].icon} />
-                  <span>{APPS[id].title}</span>
+                  <span>{APPS[id].label ?? APPS[id].title}</span>
                 </button>
               ))}
             </div>
@@ -243,7 +338,7 @@ export default function Desktop({ width, height }) {
                       ×
                     </button>
                   </header>
-                  <div className={`os-window__body ${app.dark ? 'os-window__body--dark' : ''}`}>
+                  <div className={`os-window__body ${app.dark ? 'os-window__body--dark' : ''} ${app.flush ? 'os-window__body--flush' : ''}`}>
                     <Body />
                   </div>
                 </section>
@@ -259,7 +354,7 @@ export default function Desktop({ width, height }) {
               <div className="os-start__items">
                 {START_ITEMS.map((id) => (
                   <button key={id} className="os-start__item" onClick={() => open(id)}>
-                    <Icon type={APPS[id].icon} size={24} /> {APPS[id].title}
+                    <Icon type={APPS[id].icon} size={24} /> {APPS[id].label ?? APPS[id].title}
                   </button>
                 ))}
                 <hr />
@@ -272,7 +367,7 @@ export default function Desktop({ width, height }) {
 
           <footer className="os-taskbar os-bevel" style={{ height: TASKBAR_H }}>
             <button className={`os-startbtn os-bevel ${startOpen ? 'is-pressed' : ''}`} onClick={() => setStartOpen((o) => !o)}>
-              <span className="os-startbtn__logo">SJ</span> Start
+              <SjLogo size={16} color="#111" /> Start
             </button>
             <div className="os-taskbar__wins">
               {wins.map((w) => (
@@ -281,7 +376,7 @@ export default function Desktop({ width, height }) {
                   className={`os-taskbtn os-bevel ${w.id === topId ? 'is-pressed' : ''}`}
                   onClick={() => (w.id === topId ? minimize(w.id) : focus(w.id))}
                 >
-                  <Icon type={APPS[w.id].icon} size={16} /> {APPS[w.id].title}
+                  <Icon type={APPS[w.id].icon} size={16} /> {APPS[w.id].label ?? APPS[w.id].title}
                 </button>
               ))}
             </div>

@@ -1,4 +1,7 @@
+import SjLogo from './SjLogo'
+
 // Tiny pixel-art icons for SJ-OS, drawn on a 16x16 grid: [x, y, w, h, colour] per rect.
+// 'sj' is the SJ shield logo on a white tile (My Showcase).
 const ICONS = {
   folder: [
     [1, 3, 6, 2, '#c9a227'],
@@ -53,6 +56,12 @@ const ICONS = {
 }
 
 export default function Icon({ type, size = 32 }) {
+  if (type === 'sj')
+    return (
+      <span className="os-sjicon" style={{ width: size, height: size }}>
+        <SjLogo size={size * 0.78} color="#111" />
+      </span>
+    )
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges" aria-hidden="true" className="os-svg">
       {ICONS[type].map(([x, y, w, h, fill], i) => (

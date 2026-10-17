@@ -29,9 +29,7 @@
   position: absolute; inset: 0; background: #050505; color: #c8c8c8; padding: 40px 48px;
   font-family: var(--mono); font-size: 16px; line-height: 1.8;
 }
-.os-boot__logo {
-  font-family: var(--pixel); font-size: 40px; color: #e8b923; text-shadow: 0 0 12px #e8b923; margin-bottom: 24px;
-}
+.os-boot__logo { display: block; filter: drop-shadow(0 0 10px #e8b923); margin-bottom: 24px; }
 .os-boot__cursor { animation: os-blink 0.8s steps(1) infinite; }
 @keyframes os-blink { 50% { opacity: 0; } }
 
@@ -95,7 +93,6 @@
   height: 26px; border: none; display: flex; align-items: center; gap: 6px; padding: 0 8px;
   font-family: var(--pixel) !important; font-size: 8px !important;
 }
-.os-startbtn__logo { color: #b8860b; font-weight: bold; }
 .os-taskbar__wins { flex: 1; display: flex; gap: 4px; overflow: hidden; }
 .os-taskbtn { max-width: 150px; overflow: hidden; white-space: nowrap; }
 .os-startbtn.is-pressed, .os-taskbtn.is-pressed {
@@ -116,3 +113,39 @@
   display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 8px; border: none; background: none; text-align: left;
 }
 .os-start__item:hover { background: #000080; color: #fff; }
+
+/* SJ logo icon tile */
+.os-sjicon {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; vertical-align: middle; background: #fff;
+  box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #dfdfdf, inset -2px -2px #808080;
+}
+.os-icon.is-selected .os-sjicon { filter: brightness(0.6) sepia(1) hue-rotate(180deg) saturate(4); }
+
+/* My Showcase: a little 90s homepage */
+.os-window__body--flush { display: flex; overflow: hidden; }
+.os-site { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #fbfbf8; }
+.os-site__page { flex: 1; min-height: 0; overflow: auto; }
+.os-site__home {
+  min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 10px 20px 40px;
+}
+.os-site__logo { margin-bottom: 14px; }
+.os-site h1 { font-family: 'Caprasimo', 'Cooper Black', Georgia, serif; font-weight: 400; font-size: 58px; line-height: 1; margin: 0; color: #141414; }
+.os-site h2 { font-family: 'Caprasimo', 'Cooper Black', Georgia, serif; font-weight: 400; font-size: 21px; letter-spacing: 2px; margin: 6px 0 0; color: #1e1e1e; }
+.os-site__nav { display: flex; gap: 26px; justify-content: center; margin-top: 46px; }
+.os .os-site__link, .os .os-site__home-link {
+  background: none; border: none; padding: 0; cursor: pointer !important;
+  font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: 15px; letter-spacing: 0.5px;
+}
+.os .os-site__link { color: #0000ee !important; text-decoration: underline; }
+.os .os-site__link.is-current { color: #551a8b !important; }
+.os-site__sub { padding: 16px 26px 24px; font-family: 'Times New Roman', Times, serif; font-size: 16px; line-height: 1.5; user-select: text; }
+.os-site__bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 10px; margin-bottom: 14px; border-bottom: 2px solid #141414; }
+.os-site__bar .os-site__nav { margin: 0; gap: 16px; }
+.os .os-site__home-link { display: flex; align-items: center; gap: 10px; font-family: 'Caprasimo', 'Cooper Black', Georgia, serif; font-weight: 400; font-size: 22px; color: #141414 !important; }
+.os-site h3 { font-family: 'Caprasimo', 'Cooper Black', Georgia, serif; font-weight: 400; font-size: 28px; margin: 0 0 10px; }
+.os-site__sub p { margin: 0 0 8px; }
+.os-site__sub ul { margin: 0 0 12px; padding-left: 20px; }
+.os-site__sub a { color: #0000ee; }
+.os-site__entry { margin-bottom: 14px; }
+.os-site__status { flex: none; height: 22px; display: flex; align-items: center; padding: 0 8px; background: #c0c0c0; font-size: 12px; }
