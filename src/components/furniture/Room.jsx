@@ -245,7 +245,7 @@ function DeckPipework() {
   )
 }
 
-// Olive bent-pipe railing in front of the bed (left of the stairs), like the reference: one rail that
+// Gold bent-pipe railing in front of the bed (left of the stairs), matching the pipework: one rail that
 // bends down into the deck at both ends, posts in between, every upright standing on a small base plate.
 function BedRail() {
   const x0 = 0.6
@@ -253,12 +253,12 @@ function BedRail() {
   const z = BACK_DECK.z1 - 0.1
   const top = UP + 0.78
   const posts = [0.25, 0.5, 0.75].map((f) => x0 + (x1 - x0) * f)
-  const mat = <meshStandardMaterial color={C.olive} metalness={0.5} roughness={0.4} />
+  const mat = <meshPhysicalMaterial {...K.gold()} />
   return (
     <group>
-      <Pipe color={C.olive} radius={0.04} bend={0.11} points={[[x0, UP, z], [x0, top, z], [x1, top, z], [x1, UP, z]]} flanges={false} />
+      <Pipe metal="gold" radius={0.04} bend={0.11} points={[[x0, UP, z], [x0, top, z], [x1, top, z], [x1, UP, z]]} flanges={false} />
       {posts.map((x) => (
-        <Pipe key={x} color={C.olive} radius={0.034} points={[[x, UP, z], [x, top, z]]} flanges={false} />
+        <Pipe key={x} metal="gold" radius={0.034} points={[[x, UP, z], [x, top, z]]} flanges={false} />
       ))}
       {[x0, ...posts, x1].map((x) => (
         <mesh key={`b${x}`} position={[x, UP + 0.012, z]} castShadow receiveShadow>
