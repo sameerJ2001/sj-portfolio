@@ -539,7 +539,7 @@ function Bar() {
 
       {/* two stacked collared pipes along the foot of the bar */}
       {[0.08, 0.21].map((y) => (
-        <Pipe key={y} metal="copper" radius={0.06} bend={0.08} clampEvery={0.7} points={[[-1.17, y, 0.36], [1.32, y, 0.36]]} />
+        <Pipe key={y} metal="gold" radius={0.06} bend={0.08} clampEvery={0.7} points={[[-1.17, y, 0.36], [1.32, y, 0.36]]} />
       ))}
 
       {/* big glass jar, glasses with red drinks, ashtray, bottle */}
@@ -964,8 +964,8 @@ function Boilers() {
       </mesh>
       <pointLight position={[0, DECK_BOTTOM - 0.35, 0.75]} color="#3fe0d0" intensity={2.4} distance={3.2} />
       {/* thick collared pipes up both sides, joined by a pipe across under the deck */}
-      <Pipe metal="copper" radius={0.075} bend={0.14} clampEvery={0.55} points={[[-0.8, 0, 0.08], [-0.8, DECK_BOTTOM - 0.16, 0.08], [0.72, DECK_BOTTOM - 0.16, 0.08], [0.72, DECK_BOTTOM, 0.08]]} />
-      <Pipe metal="copper" radius={0.065} bend={0.14} clampEvery={0.55} points={[[0.68, 0.32, -0.2], [0.72, 0.32, -0.2], [0.72, 0.32, 0.22], [0.72, DECK_BOTTOM - 0.3, 0.22]]} />
+      <Pipe metal="gold" radius={0.075} bend={0.14} clampEvery={0.55} points={[[-0.8, 0, 0.08], [-0.8, DECK_BOTTOM - 0.16, 0.08], [0.72, DECK_BOTTOM - 0.16, 0.08], [0.72, DECK_BOTTOM, 0.08]]} />
+      <Pipe metal="gold" radius={0.065} bend={0.14} clampEvery={0.55} points={[[0.68, 0.32, -0.2], [0.72, 0.32, -0.2], [0.72, 0.32, 0.22], [0.72, DECK_BOTTOM - 0.3, 0.22]]} />
       {/* square-flanged stubs coming out low at the side */}
       {[0.16, 0.36].map((y) => (
         <group key={y} position={[0.66, y, 0.48]}>

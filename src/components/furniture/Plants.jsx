@@ -277,7 +277,7 @@ export function Palm({ scale = 1, seed = 7, ...props }) {
   )
 }
 
-// Boston fern in a copper basket hung on three chains: fronds arching out and spilling down
+// Boston fern in a gold basket hung on three chains: fronds arching out and spilling down
 export function HangingFern({ drop = 0.6, seed = 11, ...props }) {
   const fronds = useMemo(() => {
     const rnd = seeded(seed)
@@ -297,13 +297,13 @@ export function HangingFern({ drop = 0.6, seed = 11, ...props }) {
         return (
           <mesh key={i} position={[Math.cos(a) * 0.09, -drop / 2, Math.sin(a) * 0.09]} rotation={[Math.sin(a) * 0.17, 0, -Math.cos(a) * 0.17]}>
             <cylinderGeometry args={[0.003, 0.003, drop, 4]} />
-            <meshPhysicalMaterial {...K.copper()} />
+            <meshPhysicalMaterial {...K.gold()} />
           </mesh>
         )
       })}
       <group position={[0, -drop, 0]}>
         <mesh geometry={basket} castShadow>
-          <meshPhysicalMaterial {...K.copper()} side={DoubleSide} />
+          <meshPhysicalMaterial {...K.gold()} side={DoubleSide} />
         </mesh>
         {fronds.map(({ leaves, stem, yaw, tilt }, i) => (
           <group key={i} position={[0, 0.02, 0]} rotation={[0, yaw, tilt]}>
@@ -347,14 +347,14 @@ export function Pothos({ vines = 6, length = 1.1, seed = 13, ...props }) {
   }, [vines, length, seed])
   return (
     <group {...props}>
-      <Planter r={0.12} h={0.16} material={K.copper()} />
+      <Planter r={0.12} h={0.16} material={K.gold()} />
       <mesh geometry={stems} material={stemMat()} />
       <mesh geometry={leaves} material={leafMat('heart')} castShadow />
     </group>
   )
 }
 
-// Hang anything (a pot) from three thin copper chains, `drop` metres below this point
+// Hang anything (a pot) from three thin gold chains, `drop` metres below this point
 export function Hanging({ drop = 0.4, spread = 0.1, children, ...props }) {
   return (
     <group {...props}>
@@ -364,7 +364,7 @@ export function Hanging({ drop = 0.4, spread = 0.1, children, ...props }) {
         return (
           <mesh key={i} position={[Math.cos(a) * spread * 0.5, -drop / 2, Math.sin(a) * spread * 0.5]} rotation={[Math.sin(a) * tilt, 0, -Math.cos(a) * tilt]}>
             <cylinderGeometry args={[0.003, 0.003, drop, 4]} />
-            <meshPhysicalMaterial {...K.copper()} />
+            <meshPhysicalMaterial {...K.gold()} />
           </mesh>
         )
       })}

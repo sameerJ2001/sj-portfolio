@@ -208,7 +208,7 @@ const WALL_X = -3.99
 const BRIDGE_END = BRIDGE.x1 + OUT // where the back run stops, at the bridge
 
 function DeckPipework() {
-  const pipe = { metal: 'copper', radius: PIPE_R, bend: 0.08 }
+  const pipe = { metal: 'gold', radius: PIPE_R, bend: 0.08 }
   const frame = (y) => [
     [WALL_X, y, FZ],
     [FX, y, FZ],

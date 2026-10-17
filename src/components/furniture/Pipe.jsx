@@ -6,7 +6,7 @@ import { K } from './materials'
 // A bent pipe through a list of [x, y, z] points, with rounded bends at every corner and industrial
 // fittings like the reference: collared elbows at every bend, and along the straight runs (every
 // `clampEvery` metres) strap clamps with a bolted lug, bolted flange couplings and collars with a
-// raised plate; bolted end flanges at both ends. metal="copper" (worn rose copper, the pipework) or
+// raised plate; bolted end flanges at both ends. metal="gold" (polished gold, the pipework) or
 // "steel" (polished stainless, tinted by `color`: rails and trims). All fittings merge into one mesh.
 const Z = new Vector3(0, 0, 1)
 const PATTERN = ['clamp', 'coupling', 'clamp', 'collar']
@@ -119,7 +119,7 @@ export default function Pipe({ points, radius = 0.035, bend = 0.14, color, metal
     return { tube, fittings: placed.length ? mergeGeometries(placed) : null }
   }, [key, radius, bend, clampEvery, flanges]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const mat = metal === 'copper' ? K.copper() : K.steel(color)
+  const mat = metal === 'gold' ? K.gold() : K.steel(color)
   return (
     <group>
       <mesh geometry={tube} castShadow={castShadow} receiveShadow>

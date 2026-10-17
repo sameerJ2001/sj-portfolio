@@ -29,7 +29,7 @@ npm run build      # production build -> dist/
 | `src/lib/environment.js` | Live Sydney time + weather (Open-Meteo), sunrise/sunset, sky colours, sun/moon, rain/snow/fog/storm. |
 | `src/lib/outside.js` | The view outside: futuristic Sydney across the harbour (CBD towers with neon signs, Sydney Tower, the Opera House, the Harbour Bridge, the water and its reflections), clouds, stars, lightning. |
 | `src/components/furniture/materials.js` | Industrial palette + generated textures (speckled concrete, riveted wall panels, brick, the katakana neon sign, paintings). |
-| `src/components/furniture/Pipe.jsx` | Bent pipe with rounded corners and industrial fittings (strap clamps, bolted couplings, collars, elbows, end flanges) in worn copper or steel: the deck pipework, bar and boiler pipes, the bed railing. |
+| `src/components/furniture/Pipe.jsx` | Bent pipe with rounded corners and industrial fittings (strap clamps, bolted couplings, collars, elbows, end flanges) in polished gold or steel: the deck pipework, bar and boiler pipes, the bed railing. |
 | `src/components/furniture/Plants.jsx` | The plants: kentia palm, monstera, hanging Boston fern, trailing pothos, snake plant (procedural leaves, merged per frond). |
 | `src/components/furniture/FloorReflection.jsx` | The polished concrete floor's real mirror sheen (blurred, patchy where the sealer is worn). |
 | `src/components/Character.jsx` | SJ-3PO, the gold protocol droid at the PC. Edit `SEQUENCE` to change his loop of little animations; he swivels round and waves when someone enters (`WAVE`). |

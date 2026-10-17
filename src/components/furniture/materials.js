@@ -48,42 +48,12 @@ export const K = {
   chrome: (color = '#c8d0d6') => ({ color, metalness: 0.95, roughness: 0.12 }),
   // soft fabric with a little sheen (bedding, cushions)
   fabric: (color) => ({ color, roughness: 0.85, sheen: 0.7, sheenRoughness: 0.5, sheenColor: '#ffffff' }),
-  // worn rose copper (the pipework and its fittings): buffed highlights, grime in the joints
-  // (a faint warm emissive through the same grime map keeps it reading as copper in the dark loft)
-  copper: (color = '#dba07a') => {
-    const map = copperTexture()
-    return {
-      color, map, metalness: 0.72, roughness: 0.3, clearcoat: 0.3, clearcoatRoughness: 0.3, envMapIntensity: 4.2,
-      emissive: '#4a2410', emissiveMap: map, emissiveIntensity: 0.7,
-    }
-  },
-}
-
-// Worn copper, shared by every pipe: warm base, dark grime patches and streaks running along the
-// pipe, lighter scuffs, pitting.
-let copper = null
-function copperTexture() {
-  if (copper) return copper
-  const S = 512
-  const c = document.createElement('canvas')
-  c.width = c.height = S
-  const g = c.getContext('2d')
-  const rnd = seeded(41)
-  g.fillStyle = '#f4ece6'
-  g.fillRect(0, 0, S, S)
-  grime(g, S, rnd, 30, 'rgba(60,32,18,', 0.42)
-  grime(g, S, rnd, 14, 'rgba(255,240,225,', 0.25)
-  // streaks along the pipe (TubeGeometry runs u along its length)
-  for (let i = 0; i < 70; i++) {
-    const y = rnd() * S
-    g.fillStyle = `rgba(${rnd() < 0.7 ? '50,26,14' : '255,235,215'},${0.05 + rnd() * 0.12})`
-    g.fillRect(rnd() * S, y, 40 + rnd() * 220, 1 + rnd() * 3)
-  }
-  dust(g, S, rnd, 2600)
-  copper = new CanvasTexture(c)
-  copper.wrapS = copper.wrapT = RepeatWrapping
-  copper.colorSpace = SRGBColorSpace
-  return copper
+  // polished gold (the pipework, its fittings and the plant hangers), the same finish as SJ-3PO; a
+  // touch of warm emissive keeps it reading as gold in the dark, neon-lit loft
+  gold: (color = '#f2c062') => ({
+    color, metalness: 0.85, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.1, envMapIntensity: 4.5,
+    emissive: '#5c3a0a', emissiveIntensity: 0.5,
+  }),
 }
 
 // Procedural textures so there are no image files yet.
