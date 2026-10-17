@@ -156,7 +156,8 @@ export function makeBolt() {
 // A band of bare winter trees, like the reference video: { shape, snow } textures of the same trees.
 // `shape` is the trunks + branches (white, tinted by the Window); `snow` is the snow stuck to them
 // (white), faded in and out with how much snow has settled.
-export function makeForest({ seed = 5, w = 1024, h = 512, count = 34, minW = 8, maxW = 24 } = {}) {
+// `edges` keeps the trunks to the sides (framing the view) instead of spreading them across it.
+export function makeForest({ seed = 5, w = 1024, h = 512, count = 34, minW = 8, maxW = 24, edges = false } = {}) {
   const rnd = seeded(seed)
   const shapeC = document.createElement('canvas')
   const snowC = document.createElement('canvas')
@@ -169,7 +170,7 @@ export function makeForest({ seed = 5, w = 1024, h = 512, count = 34, minW = 8, 
   g.lineCap = s.lineCap = 'round'
 
   for (let i = 0; i < count; i++) {
-    const x = rnd() * w
+    const x = edges ? (i % 2 ? 0.08 + rnd() * 0.17 : 0.75 + rnd() * 0.17) * w : rnd() * w
     const tw = minW + rnd() * (maxW - minW)
     const lean = (rnd() - 0.5) * 30
     // trunk, tapering toward the top

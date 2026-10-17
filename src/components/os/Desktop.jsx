@@ -96,7 +96,7 @@ function Showcase() {
           <div className="os-site__sub">
             <header className="os-site__bar">
               <button className="os-site__home-link" onClick={() => setPage(null)}>
-                <SjLogo size={30} color="#111" /> {SHOWCASE.name}
+                <SjLogo size={40} color="#111" /> {SHOWCASE.name}
               </button>
               {nav}
             </header>
@@ -105,7 +105,7 @@ function Showcase() {
           </div>
         ) : (
           <div className="os-site__home">
-            <SjLogo size={70} color="#111" className="os-site__logo" />
+            <SjLogo size={128} color="#111" className="os-site__logo" />
             <h1>{SHOWCASE.name}</h1>
             <h2>{SHOWCASE.tagline}</h2>
             {nav}
@@ -279,7 +279,7 @@ export default function Desktop({ width, height }) {
     <div ref={root} className="os" style={{ width, height }}>
       {!booted ? (
         <div className="os-boot">
-          <SjLogo size={64} color="#e8b923" className="os-boot__logo" />
+          <SjLogo size={110} color="#e8b923" className="os-boot__logo" />
           {BOOT.slice(0, boot).map((l) => (
             <div key={l}>{l}</div>
           ))}
@@ -367,7 +367,7 @@ export default function Desktop({ width, height }) {
 
           <footer className="os-taskbar os-bevel" style={{ height: TASKBAR_H }}>
             <button className={`os-startbtn os-bevel ${startOpen ? 'is-pressed' : ''}`} onClick={() => setStartOpen((o) => !o)}>
-              <SjLogo size={16} color="#111" /> Start
+              <SjLogo size={19} color="#111" /> Start
             </button>
             <div className="os-taskbar__wins">
               {wins.map((w) => (

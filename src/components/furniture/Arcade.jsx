@@ -1,151 +1,48 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Color } from 'three'
+import { PlaneGeometry, Shape, ShapeGeometry } from 'three'
 import { useStore } from '../../store'
 import { ARCADE_GAMES } from '../../data/content'
 import { createAttractScreen } from '../../lib/screens'
-import { GLYPHS, VoxelGrid } from '../../lib/voxels'
+import { buildCabinet } from '../../lib/arcadeCabinet'
 import ScreenHtml from '../ScreenHtml'
 
-// Playable upright arcade cabinet, built out of 2 cm voxels to match the reference's MagicaVoxel
-// look: speckly dithered colour, a stepped crown over a sign with "SJ" and two light bars, a hood
-// over a big tilted glowing screen, a control deck with two LED pods, joysticks and an "88" panel,
-// controller cables looping down over an inset lower panel, and side panels with a dark outline.
-// Idle: pixel attract mode. Walk up to it and the screen loads the game from ARCADE_GAMES
-// (content.js). Local: back to the wall (-z), screen faces +z. Colours come from the zone's
-// `cabinet`; the screen's spot (zone.screen) sits on the sloped face of PROFILE.
+// Playable upright arcade cabinet: the voxel body from lib/arcadeCabinet.js (2 cm voxels, matching
+// the reference's MagicaVoxel look), a curved CRT tube set back in it running attract mode, and the
+// game from ARCADE_GAMES (content.js) on the glass when you walk up. Local: back to the wall (-z),
+// screen faces +z. Colours come from the zone's `cabinet`, the tube's spot from `zone.screen`.
 const GAME_W = 640
 const GAME_H = 480
-const V = 0.02 // voxel size
-const HALF_W = 0.43 // outer half-width, side panels included
-const BODY = 0.385 // half-width between the side panels
-
-// Side silhouettes as [z (front), y (up)]: body, and the side panels standing proud of it
-const PROFILE = [
-  [-0.375, 0], [0.34, 0], [0.34, 0.8], [0.6, 0.85], [0.6, 0.99], [0.47, 1.07], [0.44, 1.13],
-  [0.32, 1.64], [0.5, 1.66], [0.5, 1.95], [-0.375, 1.95],
-]
-const SIDE = [
-  [-0.375, 0], [0.36, 0], [0.36, 0.8], [0.62, 0.85], [0.62, 1.0], [0.48, 1.08], [0.45, 1.13],
-  [0.33, 1.64], [0.52, 1.66], [0.52, 1.97], [-0.375, 1.97],
-]
-const MINI_8 = ['###', '#.#', '###', '#.#', '###']
-
-// palette slots
-const [BODY_C, SIDE_C, DARK, EDGE, DECK, CABLE, BEZEL, SIGN, POD, STICK, INSET, BALL] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-const [WHITE, ACCENT, DIM] = [20, 21, 22]
-
-function buildCabinet({ body, glow }, screen) {
-  const g = new VoxelGrid({ size: V, min: [-HALF_W, 0, -0.38], max: [HALF_W, 2.28, 0.64] })
-  const box = (x, y, z, c) => g.box(x, y, z, c)
-  const sym = (x0, x1) => [[x0, x1], [-x1, -x0]]
-
-  // shell: body between the side panels, slightly bigger side panels either side
-  g.profile(PROFILE, [-BODY, BODY], BODY_C)
-  for (const x of sym(BODY + 0.005, HALF_W)) g.profile(SIDE, x, SIDE_C)
-  // dark outline round the outer face of each side panel
-  for (const i of [0, g.n[0] - 1])
-    for (let j = 0; j < g.n[1]; j++)
-      for (let k = 0; k < g.n[2]; k++)
-        if (g.get(i, j, k) === SIDE_C && (!g.get(i, j + 1, k) || !g.get(i, j - 1, k) || !g.get(i, j, k + 1) || !g.get(i, j, k - 1)))
-          g.put(i, j, k, EDGE)
-
-  // recessed kick plate
-  g.paint([-BODY, BODY], [0, 0.08], [0.3, 0.36], 0)
-  g.paint([-BODY, BODY], [0, 0.08], [0.28, 0.3], DARK)
-  // inset lower panel with chamfered top corners and two vertical grooves
-  const inset = (i, j) => {
-    const [x, y] = g.centre(i, j, 0)
-    return y >= 0.12 && y <= 0.74 && Math.abs(x) <= 0.31 - Math.max(0, y - 0.66)
+// CRT glass: bulges out toward the middle like a real tube
+function crtGlass(w, h, bulge) {
+  const g = new PlaneGeometry(w, h, 24, 18)
+  const p = g.attributes.position
+  for (let i = 0; i < p.count; i++) {
+    const u = p.getX(i) / (w / 2)
+    const v = p.getY(i) / (h / 2)
+    p.setZ(i, bulge * (1 - u * u) * (1 - v * v))
   }
-  g.paint([-BODY, BODY], [0, 0.8], [0.32, 0.34], 0, inset)
-  g.paint([-BODY, BODY], [0, 0.8], [0.3, 0.32], INSET, inset)
-  for (const x of [-0.12, 0.12]) {
-    g.paint([x - 0.005, x + 0.005], [0.14, 0.7], [0.3, 0.32], 0)
-    g.paint([x - 0.005, x + 0.005], [0.14, 0.7], [0.28, 0.3], DARK)
+  g.computeVertexNormals()
+  return g
+}
+
+// Black rounded bezel around the tube
+function bezelRing(w, h, border, r) {
+  const rect = (path, hw, hh, rr) => {
+    path.moveTo(-hw + rr, -hh)
+    path.lineTo(hw - rr, -hh)
+    path.quadraticCurveTo(hw, -hh, hw, -hh + rr)
+    path.lineTo(hw, hh - rr)
+    path.quadraticCurveTo(hw, hh, hw - rr, hh)
+    path.lineTo(-hw + rr, hh)
+    path.quadraticCurveTo(-hw, hh, -hw, hh - rr)
+    path.lineTo(-hw, -hh + rr)
+    path.quadraticCurveTo(-hw, -hh, -hw + rr, -hh)
+    return path
   }
-
-  // control deck: lit top surface, glowing lip, two LED pods with sticks, the "88" panel
-  g.each([-BODY, BODY], [0.84, 1.14], [0.42, 0.62], (i, j, k) => g.get(i, j, k) && !g.get(i, j + 1, k) && g.put(i, j, k, DECK))
-  box([-BODY, BODY], [0.86, 0.88], [0.58, 0.6], ACCENT)
-  for (const s of [-1, 1]) {
-    const cx = s * 0.26
-    box([cx - 0.12, cx + 0.12], [0.97, 1.11], [0.46, 0.6], POD)
-    box([cx - 0.12, cx + 0.12], [1.1, 1.12], [0.46, 0.6], DECK)
-    for (const dx of [-0.03, 0.03]) g.point(cx + dx, 1.08, 0.59, WHITE)
-    box([cx + s * 0.04 - 0.005, cx + s * 0.04 + 0.005], [1.12, 1.18], [0.51, 0.53], STICK)
-    box([cx + s * 0.04 - 0.02, cx + s * 0.04 + 0.02], [1.18, 1.22], [0.5, 0.54], BALL)
-  }
-  box([-0.12, 0.12], [0.88, 0.98], [0.58, 0.6], DARK)
-  MINI_8.forEach((row, r) =>
-    [...row].forEach((ch, c) => {
-      if (ch !== '#') return
-      for (const x0 of [-0.08, 0.02]) g.point(x0 + c * V, 0.97 - r * V, 0.59, DIM)
-    }),
-  )
-
-  // controller cables: drop from each pod, sag down in front of the lower panel, back up into it
-  const cable = (a, b, c) => {
-    for (let t = 0; t <= 1; t += 0.002) {
-      const p = [0, 1, 2].map((n) => (1 - t) * (1 - t) * a[n] + 2 * (1 - t) * t * b[n] + t * t * c[n])
-      const [i, j, k] = g.at(...p)
-      if (!g.get(i, j, k)) g.put(i, j, k, CABLE)
-    }
-  }
-  cable([-0.24, 0.85, 0.57], [-0.2, 0.2, 0.37], [-0.03, 0.8, 0.35])
-  cable([0.27, 0.85, 0.57], [0.22, 0.3, 0.37], [0.06, 0.78, 0.35])
-
-  // screen: carve everything in front of the tilted glass, dark bezel behind it
-  const [, sy, sz] = screen.local
-  const [sw, sh] = screen.size
-  const slope = Math.tan(-screen.tilt)
-  const planeZ = (y) => sz - (y - sy) * slope
-  const half = (sh / 2) * Math.cos(screen.tilt)
-  const m = 0.03
-  g.each([-sw / 2 - m, sw / 2 + m], [sy - half - m, sy + half + m], [0, 0.64], (i, j, k) => {
-    const [, y, z] = g.centre(i, j, k)
-    if (z + V / 2 > planeZ(y) - 0.004) g.put(i, j, k, 0)
-    else if (z > planeZ(y) - 0.07 && g.get(i, j, k)) g.put(i, j, k, BEZEL)
-  })
-  // light strip under the hood, washing down over the screen
-  g.each([-0.3, 0.3], [1.64, 1.68], [0.33, 0.5], (i, j, k) => g.get(i, j, k) && !g.get(i, j - 1, k) && g.put(i, j, k, ACCENT))
-
-  // sign on top of the hood: framed front, "SJ" and two light bars in white, stepped crown
-  box([-0.33, 0.33], [1.95, 2.13], [0.2, 0.48], SIGN)
-  box([-0.33, 0.33], [1.95, 2.13], [0.46, 0.48], BODY_C)
-  box([-0.31, 0.31], [1.97, 2.11], [0.46, 0.48], SIGN)
-  ;['S', 'J'].forEach((ch, n) =>
-    GLYPHS[ch].forEach((row, r) =>
-      [...row].forEach((px, c) => {
-        if (px !== '#') return
-        for (const z of [0.47, 0.49]) g.point(-0.1 + n * 0.12 + c * V, 2.09 - r * V, z, WHITE)
-      }),
-    ),
-  )
-  for (const x of [-0.28, 0.28]) box([x - 0.005, x + 0.005], [1.99, 2.09], [0.46, 0.5], WHITE)
-  box([-0.14, 0.14], [2.14, 2.19], [0.24, 0.44], SIGN)
-  for (const x of sym(0.06, 0.14)) box(x, [2.2, 2.25], [0.28, 0.42], SIGN)
-
-  const b = new Color(body)
-  const shade = (f) => '#' + b.clone().multiplyScalar(f).getHexString()
-  const lit = '#' + b.clone().lerp(new Color(glow), 0.45).multiplyScalar(1.15).getHexString()
-  return g.mesh({
-    [BODY_C]: { color: body },
-    [SIDE_C]: { color: shade(0.86) },
-    [EDGE]: { color: shade(0.5) },
-    [DARK]: { color: shade(0.32) },
-    [DECK]: { color: lit },
-    [CABLE]: { color: '#0b0b0e', jitter: 0.15 },
-    [BEZEL]: { color: '#07080c', jitter: 0.2 },
-    [SIGN]: { color: shade(0.62) },
-    [POD]: { color: shade(0.9) },
-    [STICK]: { color: '#2b2b30' },
-    [INSET]: { color: shade(0.78) },
-    [BALL]: { color: glow },
-    [WHITE]: { color: '#ffffff', glow: true, jitter: 0.04 },
-    [ACCENT]: { color: glow, glow: true, jitter: 0.06 },
-    [DIM]: { color: shade(1.6), glow: true },
-  })
+  const outer = rect(new Shape(), w / 2 + border, h / 2 + border, r + border)
+  outer.holes.push(rect(new Shape(), w / 2, h / 2, r))
+  return new ShapeGeometry(outer, 6)
 }
 
 export default function Arcade({ zone }) {
@@ -153,7 +50,14 @@ export default function Arcade({ zone }) {
   const { glow } = zone.cabinet
   const playing = useStore((s) => s.arrivedZone === zone.id)
   const attract = useMemo(() => createAttractScreen(game.title, glow), [game.title, glow])
-  const vox = useMemo(() => buildCabinet(zone.cabinet, zone.screen), [zone])
+  const vox = useMemo(() => {
+    const { grid, palette } = buildCabinet(zone.cabinet, zone.screen)
+    return grid.mesh(palette)
+  }, [zone])
+  const tube = useMemo(
+    () => ({ glass: crtGlass(zone.screen.size[0], zone.screen.size[1], 0.018), bezel: bezelRing(...zone.screen.size, 0.03, 0.035) }),
+    [zone],
+  )
   const screenLight = useRef()
   useFrame(({ clock }, dt) => {
     if (!playing) attract.tick(dt)
@@ -162,8 +66,6 @@ export default function Arcade({ zone }) {
   })
 
   const [sx, sy, sz] = zone.screen.local
-  const [sw, sh] = zone.screen.size
-
   return (
     <group>
       <mesh geometry={vox.solid} castShadow receiveShadow>
@@ -173,11 +75,23 @@ export default function Arcade({ zone }) {
         <meshBasicMaterial vertexColors color={[2.4, 2.4, 2.4]} toneMapped={false} />
       </mesh>
 
-      {/* glowing glass: pixel attract mode, live game while you play */}
-      <mesh position={[sx, sy, sz]} rotation-x={zone.screen.tilt}>
-        <planeGeometry args={[sw, sh]} />
-        <meshBasicMaterial map={attract.texture} color={[1.1, 1.1, 1.1]} toneMapped={false} />
-      </mesh>
+      {/* the tube, set back in the cabinet: black bezel, curved glowing glass running attract mode,
+          a glossy layer that catches the room; the live game replaces it while you play */}
+      <group position={[sx, sy, sz]} rotation-x={zone.screen.tilt}>
+        <mesh geometry={tube.bezel} position-z={0.002}>
+          <meshPhysicalMaterial color="#060608" roughness={0.35} clearcoat={0.6} />
+        </mesh>
+        {!playing && (
+          <>
+            <mesh geometry={tube.glass}>
+              <meshBasicMaterial map={attract.texture} color={[1.9, 1.9, 1.9]} toneMapped={false} />
+            </mesh>
+            <mesh geometry={tube.glass} position-z={0.002}>
+              <meshPhysicalMaterial color="#000000" transparent opacity={0.12} roughness={0.06} metalness={0.2} clearcoat={1} clearcoatRoughness={0.05} envMapIntensity={2} depthWrite={false} />
+            </mesh>
+          </>
+        )}
+      </group>
       {playing && (
         <ScreenHtml screen={zone.screen} width={GAME_W} height={GAME_H}>
           <Game game={game} />

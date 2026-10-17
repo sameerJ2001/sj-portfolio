@@ -105,97 +105,223 @@ export function createTerminalScreen() {
   return { texture, tick }
 }
 
-// Arcade attract mode for the voxel cabinets: a pale, glowing, low-res pixel screen like the
-// reference (every texel reads as a chunky pixel): dithered sparkle noise, pink pixel scribbles,
-// the game's title, a rolling scan band and a blinking INSERT COIN. `color` tints the bottom.
+// 3×5 pixel font for the arcade screens (crisp at any scale): 5 rows of 3 bits per glyph
+const FONT = {
+  A: '010101111101101', B: '110101110101110', C: '011100100100011', D: '110101101101110', E: '111100110100111',
+  F: '111100110100100', G: '011100101101011', H: '101101111101101', I: '111010010010111', J: '001001001101010',
+  K: '101101110101101', L: '100100100100111', M: '101111111101101', N: '110101101101101', O: '010101101101010',
+  P: '110101110100100', Q: '010101101110011', R: '110101110101101', S: '011100010001110', T: '111010010010010',
+  U: '101101101101111', V: '101101101101010', W: '101101111111101', X: '101101010101101', Y: '101101010010010',
+  Z: '111001010100111', 0: '111101101101111', 1: '010110010010111', 2: '110001010100111', 3: '110001010001110',
+  4: '101101111001001', 5: '111100110001110', 6: '011100111101111', 7: '111001010010010', 8: '111101111101111',
+  9: '111101111001110', '-': '000000111000000', '.': '000000000000010', ':': '000010000010000', '!': '010010010000010',
+  '©': '111101101101111',
+}
+function pixelText(g, text, x, y, scale, color, align = 'left') {
+  const w = text.length * 4 * scale - scale
+  let cx = Math.round(align === 'center' ? x - w / 2 : align === 'right' ? x - w : x)
+  g.fillStyle = color
+  for (const ch of text.toUpperCase()) {
+    const bits = FONT[ch]
+    if (bits)
+      for (let i = 0; i < 15; i++) if (bits[i] === '1') g.fillRect(cx + (i % 3) * scale, y + Math.floor(i / 3) * scale, scale, scale)
+    cx += 4 * scale
+  }
+}
+
+// Arcade attract mode, like a real cabinet waiting for a coin: a title screen (big pixel title,
+// blinking INSERT COIN, scrolling grid in the cabinet's colour) alternating with the game playing
+// itself — Breakout or Snake, by the game's title — with a score bar, scanlines and a CRT vignette.
+// Low-res and nearest-filtered so every pixel reads as a chunky glowing dot.
 export function createAttractScreen(title, color) {
-  const W = 96
-  const H = 72
+  const W = 160
+  const H = 120
   const { g, texture } = canvas(W, H)
   texture.magFilter = texture.minFilter = NearestFilter
   texture.generateMipmaps = false
-  const PIX = ['#ffffff', '#f6b3dc', '#9fe9ff', '#d9a5ff', '#ffd9ef']
-  let seed = 7
-  const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280)
-  let scribbles = []
+  const demo = /snake/i.test(title) ? snakeDemo(W, H) : breakoutDemo(W, H)
+  const TITLE = 5
+  const DEMO = 13
   let t = 0
   let acc = 0
-  let reshuffle = 0
+  let hi = 9990
 
-  const newScribbles = () => {
-    scribbles = Array.from({ length: 5 }, () => {
-      const pts = [[4 + rnd() * (W - 8), 4 + rnd() * (H - 8)]]
-      for (let i = 0; i < 6; i++) {
-        const [x, y] = pts[pts.length - 1]
-        const horiz = i % 2 === 0
-        pts.push(horiz ? [Math.min(W - 3, Math.max(2, x + (rnd() - 0.5) * 30)), y] : [x, Math.min(H - 3, Math.max(2, y + (rnd() - 0.5) * 22))])
-      }
-      return { pts, c: rnd() < 0.6 ? '#f08ac4' : '#c58cf0' }
-    })
-  }
-  newScribbles()
-
-  const draw = () => {
-    const bg = g.createLinearGradient(0, 0, 0, H)
-    bg.addColorStop(0, '#f4fdff')
-    bg.addColorStop(0.55, '#d9f7ff')
-    bg.addColorStop(1, color)
-    g.fillStyle = bg
+  const crt = () => {
+    g.fillStyle = 'rgba(0,0,0,0.28)'
+    for (let y = 1; y < H; y += 2) g.fillRect(0, y, W, 1)
+    const v = g.createRadialGradient(W / 2, H / 2, H * 0.4, W / 2, H / 2, W * 0.72)
+    v.addColorStop(0, 'rgba(0,0,0,0)')
+    v.addColorStop(1, 'rgba(0,0,0,0.6)')
+    g.fillStyle = v
     g.fillRect(0, 0, W, H)
-    // dithered sparkle noise
-    for (let i = 0; i < 320; i++) {
-      g.fillStyle = PIX[Math.floor(rnd() * PIX.length)]
-      g.globalAlpha = 0.35 + rnd() * 0.5
-      g.fillRect(Math.floor(rnd() * W), Math.floor(rnd() * H), 1, 1)
+  }
+
+  const titleScreen = (tt) => {
+    g.fillStyle = '#05061a'
+    g.fillRect(0, 0, W, H)
+    // perspective grid rolling toward you, in the cabinet colour
+    g.fillStyle = color
+    g.globalAlpha = 0.5
+    for (let i = 0; i < 7; i++) {
+      const p = ((i + (tt * 0.9) % 1) / 7) ** 2
+      g.fillRect(0, Math.round(70 + p * 50), W, 1)
+    }
+    for (let i = -8; i <= 8; i++) {
+      for (let y = 70; y < H; y += 2) g.fillRect(Math.round(W / 2 + i * (6 + (y - 70) * 0.9)), y, 1, 1)
     }
     g.globalAlpha = 1
-    // blocky pink scribbles (stepped lines), re-drawn every couple of seconds
-    for (const { pts, c } of scribbles) {
-      g.fillStyle = c
-      for (let i = 1; i < pts.length; i++) {
-        const [x0, y0] = pts[i - 1]
-        const [x1, y1] = pts[i]
-        g.fillRect(Math.round(Math.min(x0, x1)), Math.round(Math.min(y0, y1)), Math.round(Math.abs(x1 - x0)) + 1, Math.round(Math.abs(y1 - y0)) + 1)
-      }
+    const big = title.length > 8 ? 2 : 3
+    pixelText(g, title, W / 2 + 1, 26 + 1, big, color, 'center')
+    pixelText(g, title, W / 2, 26, big, '#ffffff', 'center')
+    if (Math.floor(tt * 2) % 2 === 0) pixelText(g, 'INSERT COIN', W / 2, 56, 1, '#ffe14d', 'center')
+    pixelText(g, `HI ${String(hi).padStart(5, '0')}`, W / 2, 4, 1, '#ff6fb5', 'center')
+    pixelText(g, '© 2026 SJ INC', W / 2, H - 9, 1, '#9aa7ff', 'center')
+  }
+
+  const draw = () => {
+    const cycle = t % (TITLE + DEMO)
+    if (cycle < TITLE) titleScreen(cycle)
+    else {
+      g.fillStyle = '#04050f'
+      g.fillRect(0, 0, W, H)
+      demo.draw(g, color)
+      hi = Math.max(hi, demo.score)
+      pixelText(g, String(demo.score).padStart(5, '0'), 4, 3, 1, '#ffffff')
+      pixelText(g, `HI ${String(hi).padStart(5, '0')}`, W - 4, 3, 1, '#ff6fb5', 'right')
+      if (Math.floor(t * 1.5) % 2) pixelText(g, 'DEMO', W / 2, 3, 1, '#ffe14d', 'center')
     }
-    // title, with a 1px drop shadow, bobbing a pixel
-    const text = title.toUpperCase()
-    let size = 15
-    g.font = `bold ${size}px monospace`
-    while (g.measureText(text).width > W - 10 && size > 8) g.font = `bold ${--size}px monospace`
-    g.textAlign = 'center'
-    g.textBaseline = 'middle'
-    const ty = Math.round(H * 0.42 + (Math.floor(t * 2) % 2))
-    g.fillStyle = '#7a2a68'
-    g.fillText(text, W / 2 + 1, ty + 1)
-    g.fillStyle = '#ff5fae'
-    g.fillText(text, W / 2, ty)
-    if (Math.floor(t * 1.6) % 2) {
-      g.font = 'bold 7px monospace'
-      g.fillStyle = '#5b2a7a'
-      g.fillText('INSERT COIN', W / 2, Math.round(H * 0.74))
-    }
-    // rolling scan band
-    g.fillStyle = 'rgba(255,255,255,0.45)'
-    g.fillRect(0, Math.floor((t * 18) % H), W, 2)
+    crt()
     texture.needsUpdate = true
   }
 
   const tick = (dt) => {
     t += dt
+    const cycle = t % (TITLE + DEMO)
+    if (cycle >= TITLE) demo.step(Math.min(dt, 0.05))
     acc += dt
-    reshuffle += dt
-    if (reshuffle > 2.2) {
-      reshuffle = 0
-      newScribbles()
-    }
-    if (acc < 1 / 10) return
+    if (acc < 1 / 30) return
     acc = 0
     draw()
   }
 
   draw()
   return { texture, tick }
+}
+
+// Breakout playing itself: the paddle chases the ball; the wall rebuilds once it's cleared
+function breakoutDemo(W, H) {
+  const COLS = 8
+  const ROWS = 5
+  const BW = 18
+  const BH = 5
+  const X0 = (W - COLS * (BW + 1)) / 2
+  const Y0 = 16
+  const ROW_COLOURS = ['#ff4fa3', '#ff9a3c', '#ffe14d', '#56f28a', '#4fe6ff']
+  let bricks
+  const s = { score: 0, ball: { x: 80, y: 80, vx: 62, vy: -70 }, pad: 68 }
+  const reset = () => (bricks = Array.from({ length: ROWS }, () => Array(COLS).fill(true)))
+  reset()
+  return {
+    get score() {
+      return s.score
+    },
+    step(dt) {
+      const b = s.ball
+      b.x += b.vx * dt
+      b.y += b.vy * dt
+      if (b.x < 1 || b.x > W - 4) b.vx = -b.vx
+      if (b.y < 12) b.vy = Math.abs(b.vy)
+      // paddle AI with a little lag, so it occasionally only just makes it
+      s.pad += Math.max(-90 * dt, Math.min(90 * dt, b.x - 12 - s.pad))
+      s.pad = Math.max(0, Math.min(W - 24, s.pad))
+      if (b.vy > 0 && b.y > 104 && b.y < 110 && b.x > s.pad - 2 && b.x < s.pad + 25) {
+        b.vy = -Math.abs(b.vy)
+        b.vx = ((b.x - (s.pad + 12)) / 12) * 80
+      }
+      if (b.y > H) Object.assign(b, { x: s.pad + 12, y: 100, vy: -70 })
+      const c = Math.floor((b.x + 1 - X0) / (BW + 1))
+      const r = Math.floor((b.y + 1 - Y0) / (BH + 1))
+      if (r >= 0 && r < ROWS && c >= 0 && c < COLS && bricks[r][c]) {
+        bricks[r][c] = false
+        b.vy = -b.vy
+        s.score += (ROWS - r) * 10
+        if (bricks.every((row) => row.every((v) => !v))) reset()
+      }
+    },
+    draw(g) {
+      bricks.forEach((row, r) =>
+        row.forEach((on, c) => {
+          if (!on) return
+          g.fillStyle = ROW_COLOURS[r]
+          g.fillRect(X0 + c * (BW + 1), Y0 + r * (BH + 1), BW, BH)
+        }),
+      )
+      g.fillStyle = '#ffffff'
+      g.fillRect(Math.round(s.pad), 107, 24, 3)
+      g.fillRect(Math.round(s.ball.x), Math.round(s.ball.y), 3, 3)
+    },
+  }
+}
+
+// Snake playing itself: heads for the food, avoids its own tail, starts over when it's boxed in
+function snakeDemo(W, H) {
+  const CELL = 6
+  const GW = Math.floor((W - 4) / CELL)
+  const GH = Math.floor((H - 16) / CELL)
+  const OX = (W - GW * CELL) / 2
+  const OY = 13
+  const s = { score: 0 }
+  let snake
+  let food
+  let acc = 0
+  const place = () => {
+    do food = [Math.floor(Math.random() * GW), Math.floor(Math.random() * GH)]
+    while (snake.some(([x, y]) => x === food[0] && y === food[1]))
+  }
+  const reset = () => {
+    snake = [[8, 8], [7, 8], [6, 8], [5, 8]]
+    s.score = 0
+    place()
+  }
+  reset()
+  const free = ([x, y]) => x >= 0 && y >= 0 && x < GW && y < GH && !snake.some(([a, b]) => a === x && b === y)
+  return {
+    get score() {
+      return s.score
+    },
+    step(dt) {
+      acc += dt
+      if (acc < 0.085) return
+      acc = 0
+      const [hx, hy] = snake[0]
+      const options = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+        .map(([dx, dy]) => [hx + dx, hy + dy])
+        .filter(free)
+        .sort((a, b) => Math.abs(a[0] - food[0]) + Math.abs(a[1] - food[1]) - (Math.abs(b[0] - food[0]) + Math.abs(b[1] - food[1])))
+      if (!options.length || snake.length > 60) return reset()
+      const next = options[Math.random() < 0.08 && options[1] ? 1 : 0]
+      snake.unshift(next)
+      if (next[0] === food[0] && next[1] === food[1]) {
+        s.score += 10
+        place()
+      } else snake.pop()
+    },
+    draw(g, color) {
+      g.fillStyle = color
+      g.globalAlpha = 0.35
+      g.fillRect(OX - 1, OY - 1, GW * CELL + 2, 1)
+      g.fillRect(OX - 1, OY + GH * CELL, GW * CELL + 2, 1)
+      g.fillRect(OX - 1, OY - 1, 1, GH * CELL + 2)
+      g.fillRect(OX + GW * CELL, OY - 1, 1, GH * CELL + 2)
+      g.globalAlpha = 1
+      snake.forEach(([x, y], i) => {
+        g.fillStyle = i === 0 ? '#d9ffe6' : i % 2 ? '#3dff8a' : '#2fd874'
+        g.fillRect(OX + x * CELL, OY + y * CELL, CELL - 1, CELL - 1)
+      })
+      g.fillStyle = Math.floor(Date.now() / 200) % 2 ? '#ff4f6d' : '#ff9aac'
+      g.fillRect(OX + food[0] * CELL + 1, OY + food[1] * CELL + 1, CELL - 3, CELL - 3)
+    },
+  }
 }
 
 // Green-phosphor "graphics" screen for the second terminal on the floor: a scrolling waveform,

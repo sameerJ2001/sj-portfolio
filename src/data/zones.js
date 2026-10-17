@@ -1,4 +1,4 @@
-import { ARCADE_GAMES } from './content'
+import { ARCADE_GAMES } from './content.js'
 
 // Two-level cutaway cube, 8 x 8 footprint. x: -4 (left wall) → 4, z: -4 (back wall) → 4, y is up.
 // The ground floor is y = 0. Like the reference, the upper floor (y = UP) is TWO separate platforms:
@@ -52,7 +52,7 @@ export const ZONES = [
     blurb: 'Insert coin',
     place: [-3.52, UP, -1.95, Math.PI / 2],
     cabinet: { body: '#184c88', glow: '#5ee7ff' },
-    screen: { local: [0, 1.385, 0.388], tilt: -0.231, size: [0.56, 0.42] },
+    screen: { local: [0, 1.385, 0.355], tilt: -0.231, size: [0.56, 0.42] },
   },
   {
     id: 'arcade-red',
@@ -60,7 +60,7 @@ export const ZONES = [
     blurb: 'Insert coin',
     place: [-3.52, UP, -2.95, Math.PI / 2],
     cabinet: { body: '#d23b20', glow: '#ff8a6b' },
-    screen: { local: [0, 1.385, 0.388], tilt: -0.231, size: [0.56, 0.42] },
+    screen: { local: [0, 1.385, 0.355], tilt: -0.231, size: [0.56, 0.42] },
   },
   {
     id: 'window',

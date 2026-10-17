@@ -156,7 +156,9 @@ function Glass() {
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
     const day = env.daylight
-    // frost glow follows the sky: orange city at night, warm cream by day, greyer + dimmer under cloud
+    // frost glow follows the sky: orange city at night, warm cream by day, greyer + dimmer under cloud.
+    // By day the frost clears so you can see Sydney's actual sky and weather; fog keeps a little haze.
+    frost.current.opacity = 0.96 - day * (0.91 - env.fog * 0.3)
     const c = frost.current.color
     c.copy(FROST_NIGHT).lerp(FROST_DAY, day).lerp(FROST_GREY, env.cloud * 0.35 * day)
     c.multiplyScalar((1.85 - day * 0.25) * (1 - env.cloud * 0.2) * (1 - env.storm * 0.35) + env.flash * 2)
@@ -173,7 +175,7 @@ function Glass() {
 
   return (
     <group position={[0, CY, -0.1]}>
-      {/* frosted pane glowing like a light panel; the outside scene shows through faintly */}
+      {/* frosted pane glowing like a light panel at night; clears by day to show the weather outside */}
       <mesh geometry={glass}>
         <meshBasicMaterial ref={frost} map={tex.frost} transparent opacity={0.96} toneMapped={false} depthWrite={false} />
       </mesh>
@@ -360,7 +362,7 @@ const PRECIP = 240
 const dummy = new Object3D()
 const tmp = new Color()
 const WHITE = new Color('#ffffff')
-const CITY_FAR = [new Color('#1a1535'), new Color('#93a1bd')]
+const CITY_FAR = [new Color('#1a1535'), new Color('#55627b')]
 const FOREST_FAR = [new Color('#141220'), new Color('#5a6478')]
 const FOREST_NEAR = [new Color('#060509'), new Color('#262b33')]
 const SNOW_NIGHT = new Color('#c9d6f5')
@@ -373,8 +375,9 @@ function Outside() {
   const tex = useMemo(
     () => ({
       far: makeSkyline({ seed: 3, minH: 0.35, maxH: 0.95, windows: 0.22, signs: 0.15 }),
-      forestFar: makeForest({ seed: 7, h: 427, count: 46, minW: 5, maxW: 14 }),
-      forestNear: makeForest({ seed: 21, h: 512, count: 16, minW: 16, maxW: 40 }),
+      // a few bare trees between you and the city, and bigger trunks framing the sides of the view
+      forestFar: makeForest({ seed: 7, h: 427, count: 12, minW: 4, maxW: 10 }),
+      forestNear: makeForest({ seed: 21, h: 512, count: 6, minW: 16, maxW: 36, edges: true }),
       ground: makeGround(),
       clouds: makeClouds(),
       stars: makeStars(),
@@ -443,7 +446,7 @@ function Outside() {
     })
 
     // City: dark silhouettes with lit windows at night, hazy blue-grey by day
-    o.far.material.color.copy(CITY_FAR[0]).lerp(CITY_FAR[1], day).lerp(env.skyLow, 0.2 + env.fog * 0.4)
+    o.far.material.color.copy(CITY_FAR[0]).lerp(CITY_FAR[1], day).lerp(env.skyLow, 0.1 + env.fog * 0.45)
     o.farLights.material.opacity = 0.1 + (1 - day) * 0.45 - env.fog * 0.3
 
     // Forest in front: trees fade into haze with distance, snow settles on them and the ground
@@ -532,11 +535,11 @@ function Outside() {
         <planeGeometry args={[OW, 1.3]} />
         <meshBasicMaterial map={tex.clouds} {...basic} />
       </mesh>
-      <mesh ref={set('far')} position={[0, CY - 0.7, -0.62]}>
+      <mesh ref={set('far')} position={[0, CY - 0.45, -0.62]}>
         <planeGeometry args={[OW, 1.6]} />
         <meshBasicMaterial map={tex.far.shape} {...basic} />
       </mesh>
-      <mesh ref={set('farLights')} position={[0, CY - 0.7, -0.619]}>
+      <mesh ref={set('farLights')} position={[0, CY - 0.45, -0.619]}>
         <planeGeometry args={[OW, 1.6]} />
         <meshBasicMaterial map={tex.far.lights} blending={AdditiveBlending} {...basic} />
       </mesh>

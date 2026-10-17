@@ -129,10 +129,10 @@
   min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center; padding: 10px 20px 40px;
 }
-.os-site__logo { margin-bottom: 14px; }
+.os-site__logo { margin-bottom: 18px; }
 .os-site h1 { font-family: 'Caprasimo', 'Cooper Black', Georgia, serif; font-weight: 400; font-size: 58px; line-height: 1; margin: 0; color: #141414; }
 .os-site h2 { font-family: 'Caprasimo', 'Cooper Black', Georgia, serif; font-weight: 400; font-size: 21px; letter-spacing: 2px; margin: 6px 0 0; color: #1e1e1e; }
-.os-site__nav { display: flex; gap: 26px; justify-content: center; margin-top: 46px; }
+.os-site__nav { display: flex; gap: 26px; justify-content: center; margin-top: 38px; }
 .os .os-site__link, .os .os-site__home-link {
   background: none; border: none; padding: 0; cursor: pointer !important;
   font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: 15px; letter-spacing: 0.5px;

@@ -172,3 +172,60 @@ export const GLYPHS = {
   J: ['..###', '...#.', '...#.', '...#.', '#..#.', '#..#.', '.##..'],
   8: ['.###.', '#...#', '#...#', '.###.', '#...#', '#...#', '.###.'],
 }
+
+// Write a grid out as a MagicaVoxel .vox file (Uint8Array). MagicaVoxel is z-up with depth running
+// away from you, so y ↔ z swap and depth flips: the model's front (+z here) faces you in the editor.
+// Palette slots keep their numbers; glowing colours get an emissive material.
+export function toVox(grid, palette) {
+  const [nx, ny, nz] = grid.n
+  const enc = new TextEncoder()
+  const i32 = (v) => [v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >>> 24) & 255]
+  const str = (t) => [...i32(t.length), ...enc.encode(t)]
+  const chunk = (id, content) => {
+    const out = new Uint8Array(12 + content.length)
+    out.set(enc.encode(id), 0)
+    out.set(i32(content.length), 4)
+    out.set(content, 12)
+    return out
+  }
+
+  const xyzi = []
+  for (let k = 0; k < nz; k++)
+    for (let j = 0; j < ny; j++)
+      for (let i = 0; i < nx; i++) {
+        const c = grid.get(i, j, k)
+        if (c) xyzi.push(i, nz - 1 - k, j, c)
+      }
+  const voxels = new Uint8Array(4 + xyzi.length)
+  voxels.set(i32(xyzi.length / 4), 0)
+  voxels.set(xyzi, 4)
+
+  const rgba = new Uint8Array(1024)
+  const col = new Color()
+  for (let i = 1; i <= 256; i++) {
+    col.set(palette[i]?.color ?? '#808080')
+    rgba.set([Math.round(col.r * 255), Math.round(col.g * 255), Math.round(col.b * 255), 255], (i - 1) * 4)
+  }
+
+  const chunks = [chunk('SIZE', Uint8Array.from([...i32(nx), ...i32(nz), ...i32(ny)])), chunk('XYZI', voxels), chunk('RGBA', rgba)]
+  for (const [i, p] of Object.entries(palette)) {
+    if (!p.glow) continue
+    const dict = { _type: '_emit', _weight: '0.8', _flux: '1' }
+    const content = [...i32(Number(i)), ...i32(3)]
+    for (const [key, value] of Object.entries(dict)) content.push(...str(key), ...str(value))
+    chunks.push(chunk('MATL', Uint8Array.from(content)))
+  }
+
+  const total = chunks.reduce((a, c) => a + c.length, 0)
+  const file = new Uint8Array(20 + total)
+  file.set(enc.encode('VOX '), 0)
+  file.set(i32(150), 4)
+  file.set(enc.encode('MAIN'), 8)
+  file.set(i32(total), 16)
+  let at = 20
+  for (const c of chunks) {
+    file.set(c, at)
+    at += c.length
+  }
+  return file
+}

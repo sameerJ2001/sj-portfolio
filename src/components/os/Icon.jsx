@@ -59,7 +59,7 @@ export default function Icon({ type, size = 32 }) {
   if (type === 'sj')
     return (
       <span className="os-sjicon" style={{ width: size, height: size }}>
-        <SjLogo size={size * 0.78} color="#111" />
+        <SjLogo size={size * 0.86} color="#111" />
       </span>
     )
   return (

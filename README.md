@@ -23,7 +23,9 @@ npm run build      # production build -> dist/
 | `src/components/furniture/*.jsx` | One file per piece: `BattleStation` (desk + retro CRTs), `Arcade` (both cabinets), `GrandPiano`, `Window` (rainy city), `Bed`, `Kitchen`, `PhotoWall`, `Easel`, `GearCorner`, plus `Decor` (non-clickable props). |
 | `src/components/os/` | SJ-OS, the desktop on the PC screen: `Desktop.jsx` (apps, windows, taskbar, start menu), `Icon.jsx`, `os.css`. |
 | `src/components/ScreenHtml.jsx` | Mounts real DOM (SJ-OS, game iframes) onto a 3D screen. |
-| `src/lib/screens.js` | Animated idle screens: the green terminal on the CRT, arcade attract mode. |
+| `src/lib/screens.js` | Animated idle screens: the green terminal on the CRT, arcade attract mode (title screen + Breakout/Snake playing themselves). |
+| `src/lib/arcadeCabinet.js` | The arcade cabinets as 2 cm voxels (0.86 × 2.25 × 1.0 m, 43 × 113 × 50 voxels), meshed by `src/lib/voxels.js`. `node voxel/export-arcade.mjs` writes them to `voxel/arcade-blue.vox` / `arcade-red.vox` to remodel in MagicaVoxel. |
+| `src/lib/brand.js` | The SJ shield logo (one SVG path), used by SJ-OS, the CRT bezel badge and the favicon. |
 | `src/lib/environment.js` | Live Sydney time + weather (Open-Meteo), sunrise/sunset, sky colours, sun/moon, rain/snow/fog/storm. |
 | `src/lib/outside.js` | Textures for the view outside: skyline, clouds, stars, lightning. |
 | `src/components/furniture/materials.js` | Industrial palette + generated textures (speckled concrete, riveted wall panels, brick, the katakana neon sign, paintings). |
