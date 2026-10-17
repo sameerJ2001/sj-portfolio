@@ -326,9 +326,9 @@ function snakeDemo(W, H) {
 
 // ---------- outside: the MOON LIGHT billboard and flickering neon signs ----------
 
-// The MOON LIGHT billboard: a tall pixel screen with a pin-up silhouette and the name in white, cycling
-// red figure on dark → dark figure on striped red → dimmed, each change a pixel dissolve, with
-// scanlines, a scan bar rolling down, glitch slices jumping sideways and sparkling pixels.
+// The MOON LIGHT billboard, matched to the reference clip: a tall pixel screen with a pin-up silhouette
+// and the name in thin white pixel letters, running the clip's loop (see BB_TIMELINE) with its colours,
+// scanlines and horizontal-band glitches.
 const BB_W = 64
 const BB_H = 128
 // Rasterise a drawing into an on/off pixel mask. `ss` supersamples (drawn ss× larger, a pixel is on
@@ -427,64 +427,120 @@ function figureMask() {
     { ss: 4, unit: BB_W / 48 },
   )
 }
+// Thin pixel lettering like the reference billboard (1-pixel strokes, 10 rows tall)
+const THIN = {
+  M: ['#.....#', '##...##', '#.#.#.#', '#..#..#', '#.....#', '#.....#', '#.....#', '#.....#', '#.....#', '#.....#'],
+  O: ['.#####.', '#.....#', '#.....#', '#.....#', '#.....#', '#.....#', '#.....#', '#.....#', '#.....#', '.#####.'],
+  N: ['#.....#', '##....#', '#.#...#', '#.#...#', '#..#..#', '#..#..#', '#...#.#', '#...#.#', '#....##', '#.....#'],
+  L: ['#.....', '#.....', '#.....', '#.....', '#.....', '#.....', '#.....', '#.....', '#.....', '######'],
+  I: ['###', '.#.', '.#.', '.#.', '.#.', '.#.', '.#.', '.#.', '.#.', '###'],
+  G: ['.#####.', '#.....#', '#......', '#......', '#......', '#..####', '#.....#', '#.....#', '#.....#', '.#####.'],
+  H: ['#.....#', '#.....#', '#.....#', '#.....#', '#######', '#.....#', '#.....#', '#.....#', '#.....#', '#.....#'],
+  T: ['#######', '...#...', '...#...', '...#...', '...#...', '...#...', '...#...', '...#...', '...#...', '...#...'],
+}
+// drawn `h` pixels tall (rows stretched), strokes stay 1 pixel thin
+function thinText(g, text, x, y, h = 10) {
+  let cx = x
+  for (const ch of text) {
+    const rows = THIN[ch]
+    for (let r = 0; r < h; r++)
+      [...rows[Math.floor((r * rows.length) / h)]].forEach((px, c) => px === '#' && g.fillRect(cx + c, y + r, 1, 1))
+    cx += rows[0].length + 2
+  }
+}
+
+// Timeline of one loop (seconds), measured off the reference clip at 15 fps: dark, the red figure
+// flicks on and holds, a band glitch, red again, a snap to inverted, another glitch, inverted, dark.
+const BB_TIMELINE = [
+  ['off', 0.13],
+  ['fade', 0.13],
+  ['red', 4.05],
+  ['glitch', 0.27],
+  ['fade', 0.13],
+  ['red', 0.27],
+  ['inv', 0.33],
+  ['glitch', 0.27],
+  ['inv', 0.6],
+  ['off', 0.33],
+]
+const BB_LOOP = BB_TIMELINE.reduce((a, [, d]) => a + d, 0)
+// colours sampled from the clip: [background, figure]
+const BB_LOOK = {
+  off: [[52, 2, 5], [62, 2, 6]],
+  fade: [[50, 2, 3], [118, 8, 11]],
+  red: [[50, 2, 3], [214, 14, 20]],
+  inv: [[246, 68, 76], [85, 3, 5]],
+  dark: [[64, 3, 6], [44, 1, 3]],
+}
+
 export function createMoonlightBillboard() {
   const { g, texture } = canvas(BB_W, BB_H)
   texture.magFilter = texture.minFilter = NearestFilter
   texture.generateMipmaps = false
   const fig = figureMask()
   const words = maskFrom((g2) => {
-    // across the chest and waist, like the reference
-    pixelText(g2, 'MOON', BB_W / 2 + 3, 39, 2, '#fff', 'center')
-    pixelText(g2, 'LIGHT', BB_W / 2 + 1, 53, 2, '#fff', 'center')
+    // across the chest and waist, like the reference: MOON pushed right, LIGHT under it to the left
+    thinText(g2, 'MOON', 22, 32, 14)
+    thinText(g2, 'LIGHT', 14, 50, 14)
   })
-  const order = Float32Array.from({ length: BB_W * BB_H }, () => Math.random())
   const img = g.createImageData(BB_W, BB_H)
-  const STATES = [
-    { bg: [52, 6, 10], fig: [255, 46, 52], stripes: false, dur: 2.6 },
-    { bg: [255, 60, 64], fig: [86, 10, 16], stripes: true, dur: 2.4 },
-    { bg: [40, 5, 8], fig: [70, 9, 14], stripes: false, dur: 1.8 },
-  ]
-  const TOTAL = STATES.reduce((a, s) => a + s.dur, 0)
   let t = 0
   let acc = 0
-  let glitch = 0
-  let glitchRow = 0
-  let glitchShift = 0
-  let textOff = 0
+  let bands = []
+
+  // a fresh set of horizontal glitch bands, like the clip: mostly a dark smear with the figure still
+  // faintly there, some bands of the inverted picture slid sideways, and the odd thin light streak
+  const newBands = () => {
+    bands = []
+    for (let y = 0; y < BB_H; ) {
+      const r = Math.random()
+      const kind = r < 0.62 ? 'dark' : r < 0.9 ? 'inv' : 'bar'
+      const h = kind === 'bar' ? 1 + Math.floor(Math.random() * 2) : 3 + Math.floor(Math.random() * 9)
+      bands.push({ y0: y, y1: y + h, kind, shift: Math.floor((Math.random() - 0.5) * 9) })
+      y += h
+    }
+  }
 
   const draw = () => {
-    let local = t % TOTAL
-    let k = 0
-    while (local >= STATES[k].dur) local -= STATES[k++].dur
-    const cur = STATES[k]
-    const prev = STATES[(k + STATES.length - 1) % STATES.length]
-    const tr = Math.min(1, local / 0.4) // pixel dissolve into the new state
-    const pulse = k === 2 ? 0.75 + Math.sin(t * 6) * 0.25 : 1
-    const bar = ((t * 38) % (BB_H + 24)) - 12
+    let local = t % BB_LOOP
+    let state = 'off'
+    for (const [s, d] of BB_TIMELINE) {
+      if (local < d) {
+        state = s
+        break
+      }
+      local -= d
+    }
+    if (state === 'glitch') newBands()
     const d = img.data
+    let band = 0
     for (let y = 0; y < BB_H; y++) {
-      const shift = glitch > 0 && y >= glitchRow && y < glitchRow + 7 ? glitchShift : 0
-      const rowLight = (y % 2 ? 0.8 : 1) * (Math.abs(y - bar) < 2.5 ? 1.45 : 1)
+      let look = BB_LOOK[state === 'glitch' ? 'inv' : state]
+      let shift = 0
+      let bar = false
+      if (state === 'glitch') {
+        while (bands[band].y1 <= y) band++
+        const b = bands[band]
+        shift = b.shift
+        if (b.kind === 'dark') look = BB_LOOK.dark
+        bar = b.kind === 'bar'
+      }
+      // fine scanlines on every other row: subtle on the figure, strong stripes on the inverted screen
+      const scan = y % 2 ? (look === BB_LOOK.inv ? 0.8 : 0.88) : 1
       for (let x = 0; x < BB_W; x++) {
+        const i = y * BB_W + x
         const sx = Math.min(BB_W - 1, Math.max(0, x - shift))
-        const i = y * BB_W + sx
-        const st = order[i] < tr ? cur : prev
-        let r
-        let gg
-        let b
-        if (words[i] && textOff <= 0) {
-          r = gg = b = 255
-        } else {
-          const c = fig[i] ? st.fig : st.bg
-          const stripe = st.stripes && !fig[i] && y % 3 === 0 ? 0.72 : 1
-          const p = st === cur && k === 2 ? pulse : 1
-          ;[r, gg, b] = [c[0] * stripe * p, c[1] * stripe * p, c[2] * stripe * p]
+        const onFig = fig[y * BB_W + sx]
+        let c = bar ? [196, 64, 72] : onFig ? look[1] : look[0]
+        let k = bar ? 1 : onFig && look === BB_LOOK.inv ? 1 : scan
+        if (words[i]) {
+          c = [255, 246, 240]
+          k = 1
         }
-        const sparkle = Math.random() < 0.003 ? 1.8 : 1
-        const o = (y * BB_W + x) * 4
-        d[o] = Math.min(255, r * rowLight * sparkle)
-        d[o + 1] = Math.min(255, gg * rowLight * sparkle)
-        d[o + 2] = Math.min(255, b * rowLight * sparkle)
+        const o = i * 4
+        d[o] = c[0] * k
+        d[o + 1] = c[1] * k
+        d[o + 2] = c[2] * k
         d[o + 3] = 255
       }
     }
@@ -492,19 +548,12 @@ export function createMoonlightBillboard() {
     texture.needsUpdate = true
   }
 
+  // redraws at the clip's 15 fps
   const tick = (dt) => {
     t += dt
-    glitch -= dt
-    textOff -= dt
-    if (Math.random() < dt * 0.6) {
-      glitch = 0.08 + Math.random() * 0.1
-      glitchRow = Math.floor(Math.random() * (BB_H - 7))
-      glitchShift = (Math.random() < 0.5 ? -1 : 1) * (1 + Math.floor(Math.random() * 3))
-    }
-    if (Math.random() < dt * 0.25) textOff = 0.06
     acc += dt
     if (acc < 1 / 15) return
-    acc = 0
+    acc %= 1 / 15
     draw()
   }
   draw()
